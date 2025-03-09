@@ -24,9 +24,9 @@ class VehicleModel:
         return self.power_loss
 
     def pwr_gen(self):
-        self.back_gen = (self.back_subarray_ct * self.v_mpp * self.i_mpp * math.cos(math.radians(self.back_incident_angle))).to('watts')
+        self.back_gen = (self.back_subarray_ct * self.v_mpp * self.i_mpp * math.cos(math.radians(self.back_incident_angle.m))).to('watts')
 
-        self.lr_gen = (self.lr_subarray_ct * self.v_mpp * self.i_mpp * math.cos(math.radians(self.lr_incident_angle))).to('watts') * 2
+        self.lr_gen = (self.lr_subarray_ct * self.v_mpp * self.i_mpp * math.cos(math.radians(self.lr_incident_angle.m))).to('watts') * 2
 
         self.power_gen = (self.back_gen + self.lr_gen)
 
@@ -62,6 +62,7 @@ class VehicleModel:
     
     def get_optimal_gd(self, 
                     key_x, 
+                    bounds,
                     loss_function, 
                     lr, 
                     tolerance=0.0001):
@@ -79,17 +80,24 @@ class VehicleModel:
             update = lr * grad
             print(f"Update: {update}")
             
-            updated_x = getattr(self, key_x) - (update * initial_val.units)
-            updated_x = updated_x.to(initial_val.units)
+            updated_x = getattr(self, key_x).m - update
+            updated_x = max(bounds[0], updated_x)
+            updated_x = min(bounds[1], updated_x)
+            updated_x = updated_x * getattr(self, key_x).units
+
             setattr(self, key_x, updated_x)
             print(f"New {key_x}: {getattr(self, key_x)}")
 
             loss = loss_function(self)
             print(f"Loss: {loss}")
-            if abs(loss) < tolerance:
+            if (abs(loss) < tolerance or 
+                updated_x.m == bounds[0] or
+                updated_x.m == bounds[1]):
                 break
 
             points.append((getattr(self, key_x).m, loss))
+
+            time.sleep(0.1)
 
             print("=====================================")
 
@@ -110,12 +118,12 @@ class VehicleModel:
 
         return final_val
     
-    def get_optimal_sweep(self, key_x, step_size, min, max, loss_function):
+    def get_optimal_sweep(self, key_x, step_size, bounds, loss_function):
         initial_val = getattr(self, key_x)
 
         points = []
 
-        for i in np.arange(min, max, step_size):
+        for i in np.arange(bounds[0], bounds[1], step_size):
             setattr(self, key_x, i * initial_val.units)
             self.run()
             loss = loss_function(self)
@@ -133,6 +141,7 @@ class VehicleModel:
         plt.title(f"{key_x} vs Loss")
         plt.show()
 
+        breakpoint()
         return x[y.index(min(y))]
 
 def loss_function(model):
@@ -141,7 +150,7 @@ def loss_function(model):
 # Inputs
 inputs_dict = {
     # General
-    "avg_velocity": 16 * UR.mps, # m/s | average velocity
+    "avg_velocity": 0 * UR.mps, # m/s | average velocity
 
     # Drag
     "drag_coeff": 0.1305, # drag coefficient
@@ -156,7 +165,7 @@ inputs_dict = {
     "back_subarray_ct": 128,
     "lr_subarray_ct": 120,
     "back_incident_angle": 0 * UR.degrees, # degrees
-    "lr_incident_angle": 0 * UR.degrees, # degrees
+    "lr_incident_angle": 10 * UR.degrees, # degrees
 
     "del_t": 20 * UR.miles / (9 * UR.mps), # hrs | time spent racing
 
@@ -174,5 +183,5 @@ inputs_dict = {
 }
 
 model = VehicleModel(inputs_dict)
-# model.get_optimal_sweep("avg_velocity", 0.01, 0, 22, loss_function)
-model.get_optimal_gd("lr_incident_angle", loss_function, 1)
+# model.get_optimal_sweep("lr_incident_angle", 1, (0, 720), loss_function)
+model.get_optimal_gd("avg_velocity", (-float("inf"), float("inf")), loss_function, 0.0001)
