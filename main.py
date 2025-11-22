@@ -1,4 +1,5 @@
 from models.base import VehicleModel
+from models.rr import SCPRollingResistanceModel
 import yaml
 
 def parse_yaml(yaml_path: str) -> dict[str, float]:
@@ -17,6 +18,8 @@ def parse_yaml(yaml_path: str) -> dict[str, float]:
 
 def main():
     m = VehicleModel(parse_yaml("params.yaml"))
+    m.add_model(SCPRollingResistanceModel())
+    m.update()
     m.print_params()
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
-test: 1
-test2: 2
-test3: 3
+timestep: 30 # minutes
+velocity: 50 # mps
+total_power: 4500 # Wh
+num_cells: 258 
+p_mpp: 3.98 # W
