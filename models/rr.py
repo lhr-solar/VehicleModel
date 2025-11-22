@@ -6,4 +6,5 @@ class SCPRollingResistanceModel(Model):
 
     def update(self, params: Dict[str, float]):
         # TODO
+        #TEST RR
         pass
