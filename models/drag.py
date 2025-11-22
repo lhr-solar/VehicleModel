@@ -6,5 +6,4 @@ class SCPDragModel(Model):
 
     def update(self, params: Dict[str, float]):
         # TODO
-        # yo
-        pass
+        params['drag_power'] = .5 * params['density'] * params['velocity']^3 * params['drag_coeff'] * params['frontal_area']
