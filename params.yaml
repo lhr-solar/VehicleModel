@@ -1,5 +1,13 @@
+
+#rolling_resistance params
+normal_force: 3218.71986 #N
+mu: 0.3
+mu2: 0.0011 #h/km
+
+#main
 timestep: 30 # minutes
-velocity: 50 # mps
+velocity: 50 # km/h
 total_power: 4500 # Wh
 num_cells: 258 
 p_mpp: 3.98 # W
+
