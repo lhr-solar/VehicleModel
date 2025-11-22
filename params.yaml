@@ -32,7 +32,7 @@
 -
   name: p_mpp
   unit: W
-  value: 3.98 # W
+  value: 3.98 
 -
 # main
   name: timestep
