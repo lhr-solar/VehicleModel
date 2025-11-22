@@ -1,10 +1,11 @@
 from models.base import Model
-
+from typing import override
 
 class SCPRollingResistanceModel(Model):
     def __init__(self): 
-        pass
+        super().__init__()
 
+    @override
     def update(self, params: dict[str, float]):
         # TODO
         params['total_mu'] = params['mu'] + params['mu2'] * params['velocity']
