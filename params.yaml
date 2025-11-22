@@ -1,4 +1,10 @@
 
+#drag params
+drag_coeff: 0.141589419
+density: 1.225 #(air, kg/m^3)
+frontal_area: 1.268 #(m^2)
+drag_power: 0 #(Watts)
+
 #rolling_resistance params
 normal_force: 3218.71986 #N
 mu: 0.3
