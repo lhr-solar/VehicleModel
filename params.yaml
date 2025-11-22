@@ -2,6 +2,4 @@
 normal_force: 3218.71986 #N
 mu: 0.3
 mu2: 0.0011 #h/km
-total_mu: 0 #h/km
 velocity: 9 #km/h
-rolling_resistance: 0 #N

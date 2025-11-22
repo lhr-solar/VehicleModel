@@ -8,4 +8,4 @@ class SCPRollingResistanceModel(Model):
         # TODO
         params['total_mu'] = params['mu'] + params['mu2'] * params['velocity']
         params['rolling_resistance'] = params['normal_force'] * params['total_mu']
-        pass
+        params['total_power'] -= params['rolling_resistance'] * params['velocity']
