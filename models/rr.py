@@ -6,5 +6,6 @@ class SCPRollingResistanceModel(Model):
 
     def update(self, params: Dict[str, float]):
         # TODO
-        #TEST RR
+        params['total_mu'] = params['mu'] + params['mu2'] * params['velocity']
+        params['rolling_resistance'] = params['normal_force'] * params['total_mu']
         pass
