@@ -1,19 +1,50 @@
+-
 # drag
-drag_coeff: 0.141589419
-density: 1.225 #(air, kg/m^3)
-frontal_area: 1.268 #(m^2)
-
+  name: drag_coeff
+  unit: unitless
+  value: 0.141589419
+-
+  name: density
+  unit: air, kg/m^3
+  value: 1.225 
+-
+  name: frontal_area
+  unit: m^2
+  value: 1.268 
+-
 # rolling_resistance
-normal_force: 3218.71986 #N
-mu: 0.3
-mu2: 0.0011 #h/km
-
+  name: normal_force
+  unit: N
+  value: 3218.71986 
+-
+  name: mu
+  unit: unitless
+  value: 0.3
+-
+  name: mu2
+  unit: h/km
+  value: 0.0011
+-
 # array
-num_cells: 258 
-p_mpp: 3.98 # W
-
+  name: num_cells
+  unit: unitless
+  value: 258 
+-
+  name: p_mpp
+  unit: W
+  value: 3.98 # W
+-
 # main
-timestep: 30 # minutes
-velocity: 50 # km/h
-total_power: 4500 # Wh
+  name: timestep
+  unit: minutes
+  value: 30 
+-
+  name: velocity
+  unit: km/h
+  value: 50 
+-
+  name: total_power
+  unit: Wh
+  value: 4500 
+-
 
