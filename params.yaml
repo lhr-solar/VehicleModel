@@ -1,8 +1,19 @@
-test: 1
-test2: 2
-test3: 3
+
+#drag params
 drag_coeff: 0.141589419
-velocity: 9 #initial velocity of car (m/s)
 density: 1.225 #(air, kg/m^3)
 frontal_area: 1.268 #(m^2)
 drag_power: 0 #(Watts)
+
+#rolling_resistance params
+normal_force: 3218.71986 #N
+mu: 0.3
+mu2: 0.0011 #h/km
+
+#main
+timestep: 30 # minutes
+velocity: 50 # km/h
+total_power: 4500 # Wh
+num_cells: 258 
+p_mpp: 3.98 # W
+
