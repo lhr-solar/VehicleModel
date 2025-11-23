@@ -29,11 +29,12 @@ def main():
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
-   
+  
     m.print_params()
-    m.update()
-    print("====================")
-    m.print_params()
+    for i in range(30):
+        print("====================")
+        m.update()
+        m.print_params_diff()
 
 if __name__ == "__main__":
     main()

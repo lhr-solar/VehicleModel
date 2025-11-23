@@ -1,5 +1,5 @@
--
 # drag
+-
   name: drag_coeff
   unit: dimensionless
   value: 0.141589419
@@ -11,21 +11,19 @@
   name: frontal_area
   unit: m^2
   value: 1.268 
--
+
 # rolling_resistance
-  name: normal_force
-  unit: N
-  value: 3218.71986 
 -
-  name: mu
+  name: mu_rr
   unit: dimensionless
-  value: 0.3
+  value: 0.00175
 -
-  name: mu2
+  name: mu2_rr
   unit: h/km
-  value: 0.0011
--
+  value: 0.0000311
+
 # array
+-
   name: num_cells
   unit: dimensionless
   value: 258 
@@ -33,8 +31,9 @@
   name: p_mpp
   unit: W
   value: 3.98 
--
+
 # main
+-
   name: timestep
   unit: minutes
   value: 30 
@@ -43,7 +42,14 @@
   unit: km/h
   value: 50 
 -
-  name: total_power
+  name: total_energy
   unit: Wh
   value: 5240 
-
+-
+  name: weight
+  unit: kg
+  value: 328
+-
+  name: grav_accel
+  unit: m/s^2
+  value: 9.81
