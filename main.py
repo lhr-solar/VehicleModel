@@ -4,6 +4,7 @@ from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from typing import TypedDict, cast
+from datetime import datetime
 import yaml
 
 UNIT_REGISTRY = UnitRegistry()
@@ -17,10 +18,13 @@ def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
     with open(yaml_path, "r") as file:
         data = cast(list[YAMLParam], yaml.safe_load(file))
 
-    result: dict[str, Quantity[float]] = {}
+    result: dict[str, timestamp | Quantity[float]] = {}
 
-    for param_dict in data:
-        result[param_dict['name']] = param_dict['value'] * UNIT_REGISTRY(param_dict['unit'])
+    for param in data:
+        if param['unit'] == 'datetime':
+            result[param['name']] = datetime.timestamp(param['value'])
+        else:
+            result[param['name']] = param['value'] * UNIT_REGISTRY(param['unit'])
 
     return result
 
@@ -34,7 +38,7 @@ def main():
     for i in range(30):
         print("====================")
         m.update()
-        m.print_params_diff()
+        print(m.params["total_energy"])
 
 if __name__ == "__main__":
     main()

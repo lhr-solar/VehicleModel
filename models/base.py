@@ -25,9 +25,3 @@ class VehicleModel:
     def print_params(self):
         for k,p in self.params.items():
             print(k, p)
-
-    def print_params_diff(self):
-        for k,p in self.params.items():
-            if k not in self.prev_params: print(k, p)
-            else: 
-                if self.prev_params[k] != self.params[k]: print(k, p)

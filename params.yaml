@@ -53,3 +53,7 @@
   name: grav_accel
   unit: m/s^2
   value: 9.81
+-
+  name: start_ts
+  unit: datetime
+  value: 2026-07-01 09:00:00
