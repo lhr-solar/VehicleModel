@@ -1,20 +1,26 @@
+from pint import UnitRegistry, Quantity
 from models.base import VehicleModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
+from typing import TypedDict, cast
 import yaml
 
-def parse_yaml(yaml_path: str) -> dict[str, float]:
+UNIT_REGISTRY = UnitRegistry()
+
+class YAMLParam(TypedDict):
+    name: str
+    value: float
+    unit: str
+
+def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
     with open(yaml_path, "r") as file:
-        data = yaml.safe_load(file)
+        data = cast(list[YAMLParam], yaml.safe_load(file))
 
-    result: dict[str, float] = {}
+    result: dict[str, Quantity[float]] = {}
 
-    for key, value in data.items():
-        try:
-            result[key] = float(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"Value for {key!r} is not convertible to float.")
+    for param_dict in data:
+        result[param_dict['name']] = param_dict['value'] * UNIT_REGISTRY(param_dict['unit'])
 
     return result
 
@@ -23,7 +29,7 @@ def main():
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
-    
+   
     m.print_params()
     m.update()
     print("====================")

@@ -8,5 +8,5 @@ class SCPDragModel(Model):
     @override
     def update(self, params: dict[str, float]):
         # TODO
-        params['drag_power'] = 0.5 * params['density'] * params['velocity']**3 * params['drag_coeff'] * params['frontal_area']
+        params['drag_power'] = 0.5 * params['air_density'] * params['velocity']**3 * params['drag_coeff'] * params['frontal_area']
         params['total_power'] -= params['drag_power']
