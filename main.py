@@ -35,7 +35,7 @@ def main():
     m.add_model(SCPArrayModel())
   
     m.print_params()
-    for i in range(30):
+    for i in range(int((m.params["raceday_len"]/m.params["timestep"]).to('dimensionless').magnitude)):
         print("====================")
         m.update()
         print(m.params["total_energy"])

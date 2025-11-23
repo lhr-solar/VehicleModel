@@ -38,6 +38,10 @@
   unit: minutes
   value: 30 
 -
+  name: raceday_len
+  unit: hours
+  value: 8
+-
   name: velocity
   unit: km/h
   value: 50 
