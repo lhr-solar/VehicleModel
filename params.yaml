@@ -31,6 +31,10 @@
   name: p_mpp
   unit: W
   value: 3.98 
+-
+  name: cell_efficiency
+  unit: dimensionless
+  value: 0.254
 
 # main
 -

@@ -8,5 +8,5 @@ class SCPArrayModel(EnergyModel):
 
     @override
     def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
-        params["array_power"] = params["num_cells"] * params["p_mpp"]
+        params["array_power"] = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
         return params["array_power"] * timestep
