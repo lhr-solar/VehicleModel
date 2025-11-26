@@ -30,10 +30,7 @@ def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
 
 def main():
     m = VehicleModel(parse_yaml("params.yaml"))
-    # Two front wheels, one rear wheel
-    m.add_model(SCPRollingResistanceModel(m.params["f_wheel_weight"]))
-    m.add_model(SCPRollingResistanceModel(m.params["f_wheel_weight"]))
-    m.add_model(SCPRollingResistanceModel(m.params["r_wheel_weight"]))
+    m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
   
