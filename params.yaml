@@ -21,7 +21,14 @@
   name: mu2_rr
   unit: h/km
   value: 0.0000311
-
+-
+  name: f_wheel_weight
+  unit: kg
+  value: 212.45716843
+-
+  name: r_wheel_weight
+  unit: kg
+  value: 201.70697833
 # array
 -
   name: num_cells
