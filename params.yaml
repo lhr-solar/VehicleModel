@@ -24,11 +24,12 @@
 -
   name: f_wheel_weight
   unit: kg
-  value: 212.45716843
+  value: 117.5633
 -
   name: r_wheel_weight
   unit: kg
-  value: 201.70697833
+  value: 92.92334
+
 # array
 -
   name: num_cells
