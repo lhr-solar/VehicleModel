@@ -68,7 +68,7 @@ class SCPArrayModelWithIncidence(EnergyModel):
         params["total_array_energy"] += params["array_power"] * timestep
 
         # advance timestamp
-        params["timestamp"] = params["timestamp"] + timestep.magnitude
+        params["timestamp"] = params["timestamp"] + timestep
 
         # return energy produced this timestep
         return params["array_power"] * timestep
