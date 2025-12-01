@@ -36,6 +36,26 @@
   unit: dimensionless
   value: 0.254
 
+-
+  name: latitude_deg
+  unit: degree        
+  value: 30.3         # this is the latitude near UT (will change with race location)
+
+-
+  name: longitude_deg
+  unit: degree
+  value: -97.7        # this is the latitude near UT (will change with race location)
+
+-
+  name: timestamp
+  unit: s
+  value: 0.0          # starting at midnight (0 seconds)
+
+-
+  name: total_array_energy
+  unit: J
+  value: 0.0         # starting with 0 energy
+
 # main
 -
   name: timestep
