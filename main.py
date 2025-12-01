@@ -1,10 +1,10 @@
-from pint import UnitRegistry, Quantity
-from models.base import VehicleModel
-from models.rr import SCPRollingResistanceModel
-from models.drag import SCPDragModel
-from models.array import SCPArrayModelWithIncidence  
-from typing import TypedDict, cast, Union
+from typing import TypedDict, cast
 from datetime import datetime
+from pint import UnitRegistry, Quantity         
+from models.base import VehicleModel             
+from models.rr import SCPRollingResistanceModel  
+from models.drag import SCPDragModel             
+from models.array import SCPArrayModelWithIncidence  
 import yaml
 
 UNIT_REGISTRY = UnitRegistry()
@@ -14,24 +14,22 @@ class YAMLParam(TypedDict):
     value: float | str
     unit: str
 
-#  params can be pint Quantities OR datetimes
-ParamValue = Union[Quantity[float], datetime]
-
-def parse_yaml(yaml_path: str) -> dict[str, ParamValue]:
+def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
     with open(yaml_path, "r") as file:
         data = cast(list[YAMLParam], yaml.safe_load(file))
 
-    result: dict[str, ParamValue] = {}
+    result: dict[str, Quantity[float]] = {}
 
     for param in data:
         if param["unit"] == "datetime":
-            # parse into a datetime object
-            result[param["name"]] = datetime.fromisoformat(str(param["value"]))
+            dt = datetime.fromisoformat(str(param["value"]))
+            seconds_since_midnight = (dt - dt.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+            result[param["name"]] = seconds_since_midnight * UNIT_REGISTRY.second
         else:
-            result[param["name"]] = param["value"] * UNIT_REGISTRY(param["unit"])
+            result[param["name"]] = float(param["value"]) * UNIT_REGISTRY(param["unit"])
 
     return result
-
+    
 def main():
     init_params = parse_yaml("params.yaml")
     init_params["timestamp"] = init_params.pop("start_ts")
