@@ -48,10 +48,7 @@ class SCPArrayModelWithIncidence(EnergyModel):
         if sin_alpha <= 0:
             return 0.0  # sun below horizon → no power
 
-        alpha = math.asin(sin_alpha)
-
-        # Scale by sin(alpha)
-        return math.sin(alpha)
+        return sin_alpha
 
     @override
     def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
