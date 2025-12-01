@@ -23,8 +23,8 @@ class SCPArrayModelWithIncidence(EnergyModel):
        
     
         # Extract raw numbers
-        lat_deg = float(params["latitude_deg"])
-        timestamp = float(params["timestamp"])  # seconds since midnight
+        lat_deg = params["latitude_deg"].to("degree").magnitude
+        timestamp = params["timestamp"].to("second").magnitude  # seconds since midnight
 
         # Convert latitude to radians
         lat = math.radians(lat_deg)
