@@ -33,7 +33,10 @@ def parse_yaml(yaml_path: str) -> dict[str, ParamValue]:
     return result
 
 def main():
-    m = VehicleModel(parse_yaml("params.yaml"))
+    init_params = parse_yaml("params.yaml")
+    init_params["timestamp"] = init_params.pop("start_ts")
+    init_params["total_array_energy"] = 0 * UNIT_REGISTRY.joule
+    m = VehicleModel(init_params)
 
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
