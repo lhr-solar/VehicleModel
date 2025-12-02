@@ -47,4 +47,21 @@
   unit: Wh
   value: 4500 
 -
-
+#battery
+#esr_loss_model
+    name: cell_internal_impedence 
+    unit: Ohm
+    value: 0.014
+- 
+    name: cells_in_series
+    unit: unitless
+    value: 32
+-
+    name: cells_in_parallel
+    unit: unitless
+    value: 9
+-
+    name: current_draw
+    unit: Amps
+    value: 225 
+-
