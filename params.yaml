@@ -49,7 +49,7 @@
 -
 #battery
 #esr_loss_model
-    name: cell_internal_impedence 
+    name: cell_internal_impedance 
     unit: Ohm
     value: 0.014
 - 

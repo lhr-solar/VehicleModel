@@ -8,7 +8,7 @@ class ESRBatteryLossModel(Model):
     @override
     def update(self, params: dict[str, float]):
         #Pack Resistance
-        params['pack_resistance'] = (params['cell_internal_impedence'] / params['cells_in_parallel']) * params['cells_in_series']
+        params['pack_resistance'] = (params['cell_internal_impedance'] / params['cells_in_parallel']) * params['cells_in_series']
 
         #power_loss(self, current_draw: float) -> float:
         #P = I^2 * R
