@@ -1,6 +1,6 @@
 from models.base import Model
 from typing import override
-from .esr_loss_model import ESRBatteryLossModel
+from .esr_loss_model import BatteryModel
 
 class SCPBatteryModel(Model):
 
