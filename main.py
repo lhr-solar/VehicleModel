@@ -4,7 +4,7 @@ from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from typing import TypedDict, cast
-from datetime import datetime
+from datetime import datetime, timedelta
 import yaml
 import argparse
 import pandas as pd
@@ -19,18 +19,58 @@ class YAMLParam(TypedDict):
 def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
     with open(yaml_path, "r") as file:
         data = cast(list[YAMLParam], yaml.safe_load(file))
-
-    result: dict[str, timestamp | Quantity[float]] = {}
-
+    
+    result: dict[str, datetime | Quantity[float]] = {}
     for param in data:
         if param['unit'] == 'datetime':
-            result[param['name']] = datetime.timestamp(param['value'])
+            # Handle if value is already a datetime object or a string
+            if isinstance(param['value'], datetime):
+                result[param['name']] = param['value']
+            else:
+                result[param['name']] = datetime.fromisoformat(str(param['value']))
         else:
             result[param['name']] = param['value'] * UNIT_REGISTRY(param['unit'])
-
+    
     return result
 
+def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
+    # Total number of timesteps
+    total_steps = int(
+        (m.params["raceday_len"] / m.params["timestep"]).to("dimensionless").magnitude
+    )
+    
+    # Get start time from params, default to 12:00 AM if not specified
+    if "start_time" in m.params:
+        current_time = m.params["start_time"]
+    else:
+        current_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    timestep_seconds = m.params["timestep"].to("seconds").magnitude
+    
+    rows: list[dict] = []
+    
+    # Logging for every timestep
+    for i in range(total_steps):
+        m.update()
+        
+        # Format time as HH:MM:SS
+        time_str = current_time.strftime("%H:%M:%S")
+        row = {"time": time_str}
+        # ensure all parameters exist before logging
+        for name in log_params:
+            value = m.params.get(name)
+            if isinstance(value, Quantity):
+                row[name] = value.magnitude
+            else:
+                row[name] = value
+        
+        rows.append(row)
+        current_time += timedelta(seconds=timestep_seconds)
+    
+    return pd.DataFrame(rows)
+
 def main():
+    # Command-line arguments
     parser = argparse.ArgumentParser(description="Run vehicle model and log parameters.")
     parser.add_argument(
         "--log",
@@ -44,38 +84,18 @@ def main():
         help="Output CSV filename (default: log.csv)"
     )
     args = parser.parse_args()
-
+    
     m = VehicleModel(parse_yaml("params.yaml"))
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
-
-    # Total steps
-    total_steps = int(
-        (m.params["raceday_len"] / m.params["timestep"]).to("dimensionless").magnitude
-    )
-
-    rows: list[dict] = []
-    t = 0.0
-    for i in range(total_steps):
-        m.update()
-
-        row = {"timestep": t}
-        for name in args.log:
-            value = m.params.get(name)
-            # Handle pint quantities → convert to base units → numeric
-            if isinstance(value, Quantity):
-                row[name] = value.magnitude
-            else:
-                row[name] = value
-
-        rows.append(row)
-
-        # Increment time
-        t += m.params["timestep"].to("seconds").magnitude
-
-    df = pd.DataFrame(rows)
+    
+    # Run simulation and get results
+    df = run_simulation(m, args.log)
+    
+    # Save to CSV
     df.to_csv(args.csv, index=False)
+    print(f"Simulation complete. Results saved to {args.csv}")
 
 if __name__ == "__main__":
     main()
