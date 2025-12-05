@@ -13,4 +13,4 @@ class ESRBatteryLossModel(Model):
         #power_loss(self, current_draw: float) -> float:
         #P = I^2 * R
         params['battery_power_loss'] = (params['current_draw'] ** 2) * params['pack_resistance']
-        params['total_power'] -= params['battery_power_loss']
+        return params['battery_power_loss']
