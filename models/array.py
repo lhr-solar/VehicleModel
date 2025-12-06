@@ -29,6 +29,15 @@ class SCPArrayModelWithIncidence(EnergyModel):
         # Convert latitude to radians
         lat = math.radians(lat_deg)
 
+        # Time of day in seconds 
+        time_of_day_s = timestamp
+
+        # Convert to fractional hours for hour angle
+        time_of_day_hours = time_of_day_s / 3600.0
+
+        # Hour angle: 0 at noon, now with second-level precision
+        h = (time_of_day_hours - 12.0) * (math.pi / 12.0)
+        
         # Time of day in hours
         time_hours = timestamp / 3600.0
 
