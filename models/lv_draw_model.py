@@ -8,12 +8,13 @@ class LVDrawModel():
          'vcu', 'controls_leader', 'horn', 'lighting', 'pi_&_display', 
          'pedals', 'camera_hub', 'battery_box', 'mppt_a', 'mppta_b', 
          'mppt_c', 'motor_controller', 'telemetry_leader', 'pump'
-     ] 
+        ] 
      @override
      def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]: 
-        mode = params.get('lv_mode', 'constant')
-        suffix = "_peak" if mode == 'peak' else "_const"
-        for component in self.componenets:
+        mode = params.get('enable_peak_draw', 0)
+        suffix = "_peak" if mode == 1 else "_const"
+        total_current = 0
+        for component in self.components:
             peak_key = f"{component}{suffix}"
             constant_key = component
             if peak_key in params:

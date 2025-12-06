@@ -85,9 +85,9 @@
   value: 115.2
 -
   #LV draw constants
-  name: lv_mode
+  name: enable_peak_draw
   unit: dimensionless
-  value: peak
+  value: 1
 -
   name: vcu
   unit: amps
