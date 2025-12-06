@@ -19,7 +19,7 @@ class YAMLParam(TypedDict):
     value: float
     unit: str
 
-def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
+def parse_yaml(yaml_path: str) -> dict[str, datetime | Quantity[float]]:
     with open(yaml_path, "r") as file:
         data = cast(list[YAMLParam], yaml.safe_load(file))
     
