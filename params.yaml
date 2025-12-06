@@ -86,3 +86,60 @@
   name: battery_voltage_nominal
   unit: volts
   value: 115.2
+-
+  #LV draw constants
+  name: vcu
+  unit: amps
+  value: 0.750
+-
+  name: controls_leader
+  unit: amps
+  value: 0.200
+-
+  name: horn
+  unit: amps
+  value: 0.000
+-
+  name: lighting
+  unit: amps
+  value: 1.000
+-
+  name: pi_&_display
+  unit: amps
+  value: 0.800
+-
+  name: pedals
+  unit: amps
+  value: 0.100
+-
+  name: camera_hub
+  unit: amps
+  value: 0.050
+-
+  name: battery_box
+  unit: amps
+  value: 1.800
+-
+  name: mppt_a
+  unit: amps
+  value: 0.010
+-
+  name: mppt_b
+  unit: amps
+  value: 0.010
+-
+  name: mppt_c
+  unit: amps
+  value: 0.010
+-
+  name: motor_controller
+  unit: amps
+  value: 1.000
+-
+  name: telemtry_leader
+  unit: amps
+  value: 0.900
+-
+  name: pump
+  unit: amps
+  value: 0.750
