@@ -62,16 +62,16 @@ class SCPArrayModelWithIncidence(EnergyModel):
         factor = self._incidence_factor(params)
 
        # base max power
-    base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
+        base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
 
-    params["array_power"] = base_power * factor
+        params["array_power"] = base_power * factor
 
-        # energy produced this timestep (Power × time)
-    params["array_energy"] = params["array_power"] * timestep
+            # energy produced this timestep (Power × time)
+        params["array_energy"] = params["array_power"] * timestep
 
-    # accumulate total array energy over the whole race
-    params["total_array_energy"] += params["array_energy"]
+        # accumulate total array energy over the whole race
+        params["total_array_energy"] += params["array_energy"]
 
-    # return energy produced this timestep
-    return params["array_energy"]
+        # return energy produced this timestep
+        return params["array_energy"]
 
