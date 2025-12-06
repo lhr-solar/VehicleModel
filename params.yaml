@@ -65,7 +65,7 @@
   name: start_ts
   unit: datetime
   value: 2026-07-01 09:00:00#battery
-  
+
 #esr_loss_model
   name: cell_internal_impedance 
   unit: Ohm
@@ -82,4 +82,8 @@
   name: instantaneous_current_draw
   unit: Amps
   value: 225 
+-
+  name: battery_voltage_nominal
+  unit: V
+  value: 115.2
 -
