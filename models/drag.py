@@ -1,4 +1,4 @@
-from models.base import EnergyModel
+from models.energy_model import EnergyModel
 from typing import override
 from pint import Quantity 
 
