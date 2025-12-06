@@ -2,7 +2,22 @@ from models.base import Model
 from typing import override
 from .esr_loss_model import BatteryModel
 
-class SCPBatteryModel(Model):
+class ESRBatteryLossModel(Model):
+    def __init__(self):
+        pass
+
+    @override
+    def update(self, params: dict[str, float]):
+        #Pack Resistance
+        params['pack_resistance'] = (params['cell_internal_impedance'] / params['cells_in_parallel']) * params['cells_in_series']
+
+        #power_loss(self, current_draw: float) -> float:
+        #P = I^2 * R
+        params['current_draw'] = (params['drag_power'] + params['rolling_resistance_power'])/params[battery_voltage_nominal]) 
+        params['battery_power_loss'] = (params['current_draw'] ** 2) * params['pack_resistance']
+        return params['battery_power_loss']
+    
+class BatteryModel(Model):
 
     def __init__(self):
         super().__init__()
@@ -14,4 +29,4 @@ class SCPBatteryModel(Model):
         return self.loss_model.update(params)
         #may need to reset current each time we update to grab the new instant value
         #params['current_draw'] = 0.0
-        
+    

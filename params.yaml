@@ -1,53 +1,71 @@
--
 # drag
+-
   name: drag_coeff
-  unit: unitless
+  unit: dimensionless
   value: 0.141589419
 -
-  name: density
-  unit: air, kg/m^3
+  name: air_density
+  unit: kg/m^3
   value: 1.225 
 -
   name: frontal_area
   unit: m^2
   value: 1.268 
--
+
 # rolling_resistance
-  name: normal_force
-  unit: N
-  value: 3218.71986 
 -
-  name: mu
-  unit: unitless
-  value: 0.3
+  name: mu_rr
+  unit: dimensionless
+  value: 0.00175
 -
-  name: mu2
+  name: mu2_rr
   unit: h/km
-  value: 0.0011
--
+  value: 0.0000311
+
 # array
+-
   name: num_cells
-  unit: unitless
+  unit: dimensionless
   value: 258 
 -
   name: p_mpp
   unit: W
   value: 3.98 
 -
+  name: cell_efficiency
+  unit: dimensionless
+  value: 0.254
+
 # main
+-
   name: timestep
   unit: minutes
   value: 30 
+-
+  name: raceday_len
+  unit: hours
+  value: 8
 -
   name: velocity
   unit: km/h
   value: 50 
 -
-  name: total_power
+  name: total_energy
   unit: Wh
-  value: 4500 
+  value: 5240 
 -
-#battery
+  name: weight
+  unit: kg
+  value: 328
+-
+  name: grav_accel
+  unit: m/s^2
+  value: 9.81
+-
+  name: start_ts
+  unit: datetime
+  value: 2026-07-01 09:00:00#battery
+  
 #esr_loss_model
   name: cell_internal_impedance 
   unit: Ohm
