@@ -64,8 +64,9 @@
 -
   name: start_ts
   unit: datetime
-  value: 2026-07-01 09:00:00#battery
-
+  value: 2026-07-01 09:00:00
+  #battery
+-
 #esr_loss_model
   name: cell_internal_impedance 
   unit: ohm
@@ -88,6 +89,10 @@
   value: 115.2
 -
   #LV draw constants
+  name: lv_mode
+  unit: dimensionless
+  value: peak
+-
   name: vcu
   unit: amps
   value: 0.750
@@ -100,13 +105,25 @@
   unit: amps
   value: 0.000
 -
+  name: horn_peak
+  unit: amps
+  value: 4.000
+-
   name: lighting
   unit: amps
   value: 1.000
 -
+  name: lighting_peak
+  unit: amps
+  value: 3.600
+-
   name: pi_&_display
   unit: amps
   value: 0.800
+-
+  name: pi_&_display_peak
+  unit: amps
+  value: 0.850
 -
   name: pedals
   unit: amps
@@ -136,10 +153,22 @@
   unit: amps
   value: 1.000
 -
+  name: motor_controller_peak
+  unit: amps
+  value: 2.200
+-
   name: telemtry_leader
   unit: amps
   value: 0.900
 -
+  name: telemtry_leader_peak
+  unit: amps
+  value: 1.100
+-
   name: pump
   unit: amps
   value: 0.750
+-
+  name: pump_peak
+  unit: amps
+  value: 1.250
