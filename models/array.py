@@ -37,12 +37,6 @@ class SCPArrayModelWithIncidence(EnergyModel):
 
         # Hour angle: 0 at noon, now with second-level precision
         h = (time_of_day_hours - 12.0) * (math.pi / 12.0)
-        
-        # Time of day in hours
-        time_hours = timestamp / 3600.0
-
-        # Hour angle: 0 at noon
-        h = (time_hours - 12.0) * math.pi / 12.0
 
         # Simple declination (equinox)
         dec = 0.0
