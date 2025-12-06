@@ -11,7 +11,7 @@ class VehicleModel:
 
     def add_model(self, model: EnergyModel):
         if isinstance(model, BatteryModel):
-            self.batterymodel = model
+            self.battery_model = model
         else:
             self.models.append(model)
 
