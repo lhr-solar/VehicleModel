@@ -81,10 +81,6 @@
   unit: dimensionless
   value: 9
 -
-  name: instantaneous_current_draw
-  unit: amps
-  value: 225 
--
   name: battery_voltage_nominal
   unit: volts
   value: 115.2
