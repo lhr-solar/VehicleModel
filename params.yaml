@@ -90,81 +90,85 @@
   value: 1
 -
   name: vcu
-  unit: amps
+  unit: amperes
   value: 0.750
 -
   name: controls_leader
-  unit: amps
+  unit: amperes
   value: 0.200
 -
   name: horn
-  unit: amps
+  unit: amperes
   value: 0.000
 -
   name: horn_peak
-  unit: amps
+  unit: amperes
   value: 4.000
 -
   name: lighting
-  unit: amps
+  unit: amperes
   value: 1.000
 -
   name: lighting_peak
-  unit: amps
+  unit: amperes
   value: 3.600
 -
   name: pi_&_display
-  unit: amps
+  unit: amperes
   value: 0.800
 -
   name: pi_&_display_peak
-  unit: amps
+  unit: amperes
   value: 0.850
 -
   name: pedals
-  unit: amps
+  unit: amperes
   value: 0.100
 -
   name: camera_hub
-  unit: amps
+  unit: amperes
   value: 0.050
 -
   name: battery_box
-  unit: amps
+  unit: amperes
   value: 1.800
 -
   name: mppt_a
-  unit: amps
+  unit: amperes
   value: 0.010
 -
   name: mppt_b
-  unit: amps
+  unit: amperes
   value: 0.010
 -
   name: mppt_c
-  unit: amps
+  unit: amperes
   value: 0.010
 -
   name: motor_controller
-  unit: amps
+  unit: amperes
   value: 1.000
 -
   name: motor_controller_peak
-  unit: amps
+  unit: amperes
   value: 2.200
 -
   name: telemtry_leader
-  unit: amps
+  unit: amperes
   value: 0.900
 -
   name: telemtry_leader_peak
-  unit: amps
+  unit: amperes
   value: 1.100
 -
   name: pump
-  unit: amps
+  unit: amperes
   value: 0.750
 -
   name: pump_peak
-  unit: amps
+  unit: amperes
   value: 1.250
+-
+  name: lv_voltage
+  unit: volts
+  value: 24

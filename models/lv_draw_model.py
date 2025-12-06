@@ -1,18 +1,19 @@
 from typing import override
-from pint import Quantity 
+from pint import Quantity
+from .energy_model import EnergyModel
 
 class LVDrawModel():
      def __init__(self):
         super().__init__()
         self.components = [
          'vcu', 'controls_leader', 'horn', 'lighting', 'pi_&_display', 
-         'pedals', 'camera_hub', 'battery_box', 'mppt_a', 'mppta_b', 
+         'pedals', 'camera_hub', 'battery_box', 'mppt_a', 'mppt_b', 
          'mppt_c', 'motor_controller', 'telemetry_leader', 'pump'
         ] 
      @override
      def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]: 
         mode = params.get('enable_peak_draw', 0)
-        suffix = "_peak" if mode == 1 else "_const"
+        suffix = "_peak" if mode == 1 else ""
         total_current = 0
         for component in self.components:
             peak_key = f"{component}{suffix}"
@@ -23,5 +24,6 @@ class LVDrawModel():
                 total_current += params[constant_key]
             else:
                pass
-        params['lv_draw_power'] = 24*total_current
+        params['lv_draw_power'] = params['lv_voltage'] * total_current
+
         return params['lv_draw_power'] * timestep
