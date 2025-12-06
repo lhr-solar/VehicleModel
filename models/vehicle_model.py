@@ -5,13 +5,13 @@ from .energy_model import EnergyModel
 
 class VehicleModel:
     def __init__(self, init_params: dict[str, Quantity[float]]):
-        self.batterymodel : BatteryModel = None
+        self.battery_model : BatteryModel = None
         self.models : list[EnergyModel] = []
         self.params : dict[str, Quantity[float]] = init_params.copy()
 
     def add_model(self, model: EnergyModel):
         if isinstance(model, BatteryModel):
-            self.batterymodel = model
+            self.battery_model = model
         else:
             self.models.append(model)
 
@@ -20,7 +20,7 @@ class VehicleModel:
         for m in self.models:
             self.params['total_energy'] += m.update(self.params, self.params['timestep'])
         #battery update
-        self.params['total_energy'] += self.batterymodel.update(self.params, self.params['timestep'])
+        self.params['total_energy'] += self.battery_model.update(self.params, self.params['timestep'])
     def print_params(self):
         for k,p in self.params.items():
             print(k, p)

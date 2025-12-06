@@ -178,6 +178,7 @@ def main():
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
+    m.add_model(BatteryModel())
     
     # Determine which parameters to graph (default: all logged parameters)
     graph_params = args.graph or args.log
