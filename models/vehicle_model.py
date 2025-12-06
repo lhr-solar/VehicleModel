@@ -5,7 +5,7 @@ from .energy_model import EnergyModel
 
 class VehicleModel:
     def __init__(self, init_params: dict[str, Quantity[float]]):
-        self.batterymodel : BatteryModel = None
+        self.battery_model : BatteryModel = None
         self.models : list[EnergyModel] = []
         self.params : dict[str, Quantity[float]] = init_params.copy()
 

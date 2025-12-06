@@ -64,7 +64,9 @@
 -
   name: start_ts
   unit: datetime
-  value: 2026-07-01 09:00:00#battery
+  value: 2026-07-01 09:00:00
+  
+#battery
 
 #esr_loss_model
   name: cell_internal_impedance 
