@@ -2,7 +2,7 @@ from typing import override
 from pint import Quantity
 from .energy_model import EnergyModel
 
-class LVDrawModel():
+class LVDrawModel(EnergyModel):
      def __init__(self):
         super().__init__()
         self.components = [
