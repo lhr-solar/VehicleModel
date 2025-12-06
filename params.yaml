@@ -68,22 +68,21 @@
 
 #esr_loss_model
   name: cell_internal_impedance 
-  unit: Ohm
+  unit: ohm
   value: 0.014
 - 
   name: cells_in_series
-  unit: unitless
+  unit: dimensionless
   value: 32
 -
   name: cells_in_parallel
-  unit: unitless
+  unit: dimensionless
   value: 9
 -
   name: instantaneous_current_draw
-  unit: Amps
+  unit: amps
   value: 225 
 -
   name: battery_voltage_nominal
-  unit: V
+  unit: volts
   value: 115.2
--

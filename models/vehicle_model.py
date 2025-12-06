@@ -1,14 +1,7 @@
 from abc import ABC, abstractmethod
 from pint import Quantity
 from .battery import BatteryModel
-
-class EnergyModel(ABC):
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
-        pass
+from .energy_model import EnergyModel
 
 class VehicleModel:
     def __init__(self, init_params: dict[str, Quantity[float]]):
@@ -26,8 +19,8 @@ class VehicleModel:
         self.prev_params = self.params.copy()
         for m in self.models:
             self.params['total_energy'] += m.update(self.params, self.params['timestep'])
-            
-        self.params['total_energy'] += self.batterymodel.update
+        #battery update
+        self.params['total_energy'] += self.batterymodel.update(self.params, self.params['timestep'])
     def print_params(self):
         for k,p in self.params.items():
             print(k, p)

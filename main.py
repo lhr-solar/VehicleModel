@@ -1,5 +1,6 @@
 from pint import UnitRegistry, Quantity
-from models.base import VehicleModel
+from models.vehicle_model import VehicleModel
+from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
@@ -33,6 +34,7 @@ def main():
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
+    m.add_model(BatteryModel())
   
     m.print_params()
     for i in range(int((m.params["raceday_len"]/m.params["timestep"]).to('dimensionless').magnitude)):
