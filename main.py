@@ -71,6 +71,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
         current_time += timedelta(seconds=timestep_seconds)
     
     return pd.DataFrame(rows)
+    
 def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
     units_map = {}
     for param in params:
