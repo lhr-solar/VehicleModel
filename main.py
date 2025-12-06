@@ -18,7 +18,7 @@ UNIT_REGISTRY = UnitRegistry()
 
 class YAMLParam(TypedDict):
     name: str
-    value: float
+    value: float 
     unit: str
 
 def parse_yaml(yaml_path: str) -> dict[str, datetime | Quantity[float]]:
