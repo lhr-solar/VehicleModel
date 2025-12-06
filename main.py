@@ -12,11 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pathlib import Path
 
-"""
-How to run the shell script:
-./run-model.sh --log parameter_1 parameter_2 --graph parameter_1 parameter_2
-"""
-
 UNIT_REGISTRY = UnitRegistry()
 
 class YAMLParam(TypedDict):
@@ -47,11 +42,8 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
         (m.params["raceday_len"] / m.params["timestep"]).to("dimensionless").magnitude
     )
     
-    # Get start time from params, default to 9:00 AM if not specified
-    if "start_ts" in m.params:
-        current_time = m.params["start_ts"]
-    else:
-        current_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    # Get start time from params with default fallback
+    current_time = m.params.get("start_ts", datetime(2026, 7, 1, 9, 0, 0))
     
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
     
@@ -61,8 +53,9 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     for i in range(total_steps):
         m.update()
         
-        # Store both string and datetime object
+        # Store date, time, and datetime object
         row = {
+            "date": current_time.strftime("%Y-%m-%d"),
             "time": current_time.strftime("%H:%M:%S"),
             "datetime": current_time
         }
@@ -78,9 +71,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
         current_time += timedelta(seconds=timestep_seconds)
     
     return pd.DataFrame(rows)
-
 def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
-  
     units_map = {}
     for param in params:
         value = m.params.get(param)
@@ -92,7 +83,6 @@ def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
     return units_map
 
 def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str):
-  
     plt.style.use('seaborn-v0_8-darkgrid')
     
     fig, ax = plt.subplots(figsize=(12, 6), dpi=300)
@@ -130,7 +120,6 @@ def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str
     print(f"Graph saved to {output_path}")
 
 def generate_graphs(df: pd.DataFrame, graph_params: list[str], units_map: dict[str, str], output_dir: str):
-   
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
   
@@ -170,8 +159,8 @@ def main():
     )
     parser.add_argument(
         "--graph",
-        nargs="+",
-        help="List of parameter names to graph over time",
+        nargs="*",
+        help="List of parameter names to graph over time (default: graphs all logged parameters)",
         default=None
     )
     parser.add_argument(
@@ -187,23 +176,25 @@ def main():
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
     
+    # Determine which parameters to graph (default: all logged parameters)
+    graph_params = args.graph or args.log
+    
     # Combine log and graph parameters to ensure all needed data is captured
-    all_params = list(set(args.log + (args.graph if args.graph else [])))
-
+    all_params = list(set(args.log + graph_params))
+    
     # Run simulation and get results
     df = run_simulation(m, all_params)
     
-    # Get units for all parameters before running simulation
+    # Get units for all parameters after running simulation
     units_map = get_param_units(m, all_params)
     
     # Save to CSV
-    df_to_save = df.drop(columns=['datetime'])  # Don't save datetime object to CSV
+    df_to_save = df.drop(columns=['datetime'])  
     df_to_save.to_csv(args.csv, index=False)
     print(f"Simulation complete. Results saved to {args.csv}")
     
-    # Generate graphs if requested
-    if args.graph:
-        generate_graphs(df, args.graph, units_map, args.graph_output)
+    # Generate graphs
+    generate_graphs(df, graph_params, units_map, args.graph_output)
 
 if __name__ == "__main__":
     main()
