@@ -1,18 +1,20 @@
 from abc import ABC, abstractmethod
+from pint.facets.plain import PlainQuantity
 from pint import Quantity
+from datetime import datetime
 
 class EnergyModel(ABC):
     def __init__(self):
         pass
 
     @abstractmethod
-    def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
+    def update(self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]) -> PlainQuantity[float]:
         pass
 
 class VehicleModel:
-    def __init__(self, init_params: dict[str, Quantity[float]]):
+    def __init__(self, init_params: dict[str, PlainQuantity[float]]):
         self.models : list[EnergyModel] = []
-        self.params : dict[str, Quantity[float]] = init_params.copy()
+        self.params : dict[str, PlainQuantity[float]] = init_params.copy()
 
     def add_model(self, model: EnergyModel):
         self.models.append(model)

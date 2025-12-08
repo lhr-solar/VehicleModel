@@ -1,8 +1,11 @@
-from pint import UnitRegistry, Quantity
 from models.base import VehicleModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
-from models.array import SCPArrayModel
+from models.array import SCPArrayModel, SCPArrayModelWithIncidence
+from units import UNIT_REGISTRY, Q_
+
+from pint.facets.plain import PlainQuantity
+from pint import Quantity
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
 import yaml
@@ -12,27 +15,25 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pathlib import Path
 
-UNIT_REGISTRY = UnitRegistry()
-
 class YAMLParam(TypedDict):
     name: str
     value: float 
     unit: str
 
-def parse_yaml(yaml_path: str) -> dict[str, datetime | Quantity[float]]:
+def parse_yaml(yaml_path: str) -> dict[str, PlainQuantity[float]]:
     with open(yaml_path, "r") as file:
         data = cast(list[YAMLParam], yaml.safe_load(file))
     
-    result: dict[str, datetime | Quantity[float]] = {}
+    result: dict[str, PlainQuantity[float]] = {}
     for param in data:
         if param['unit'] == 'datetime':
             # Handle if value is already a datetime object or a string
             if isinstance(param['value'], datetime):
-                result[param['name']] = param['value']
+                result[param['name']] = Q_(param['value'].timestamp(), "seconds")
             else:
-                result[param['name']] = datetime.fromisoformat(str(param['value']))
+                result[param['name']] = Q_(datetime.fromisoformat(str(param['value'])).timestamp(), "seconds")
         else:
-            result[param['name']] = param['value'] * UNIT_REGISTRY(param['unit'])
+            result[param['name']] = Q_(param['value'], param['unit'])
     
     return result
 
@@ -43,7 +44,10 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     )
     
     # Get start time from params with default fallback
-    current_time = m.params.get("start_ts", datetime(2026, 7, 1, 9, 0, 0))
+    current_time : datetime = cast(
+        datetime,
+        m.params.get("start_ts", datetime(2026, 7, 1, 9, 0, 0))
+    )
     
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
     
@@ -175,7 +179,7 @@ def main():
     m = VehicleModel(parse_yaml("params.yaml"))
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
-    m.add_model(SCPArrayModel())
+    m.add_model(SCPArrayModelWithIncidence())
     
     # Determine which parameters to graph (default: all logged parameters)
     graph_params = args.graph or args.log
