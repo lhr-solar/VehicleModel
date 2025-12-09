@@ -5,13 +5,18 @@ from pint import Quantity
 from units import Q_
 import math
 
+
 class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
 
     @override
-    def update(self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]) -> PlainQuantity[float]:
-        params["array_power"] = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
+    def update(
+        self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
+    ) -> PlainQuantity[float]:
+        params["array_power"] = (
+            params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
+        )
         return params["array_power"] * timestep
 
 
@@ -22,7 +27,7 @@ class SCPArrayModelWithIncidence(EnergyModel):
     def _incidence_factor(self, params: dict[str, PlainQuantity[float]]) -> float:
         # Compute how much sunlight hits the array (0–1)
         # based on time of day + latitude.
-       
+
         # Extract raw numbers
         lat_deg = params["latitude_deg"].to("degree").magnitude
         timestamp = params["timestamp"].to("second").magnitude  # seconds since midnight
@@ -30,7 +35,7 @@ class SCPArrayModelWithIncidence(EnergyModel):
         # Convert latitude to radians
         lat = math.radians(lat_deg)
 
-        # Time of day in seconds 
+        # Time of day in seconds
         time_of_day_s = timestamp
 
         # Convert to fractional hours for hour angle
@@ -43,10 +48,9 @@ class SCPArrayModelWithIncidence(EnergyModel):
         dec = 0.0
 
         # Solar elevation angle formula from book
-        sin_alpha = (
-            math.sin(lat) * math.sin(dec) +
-            math.cos(lat) * math.cos(dec) * math.cos(h)
-        )
+        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(
+            dec
+        ) * math.cos(h)
         sin_alpha = max(-1.0, min(1.0, sin_alpha))
 
         if sin_alpha <= 0:
@@ -55,12 +59,16 @@ class SCPArrayModelWithIncidence(EnergyModel):
         return sin_alpha
 
     @override
-    def update(self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]) -> PlainQuantity[float]:
+    def update(
+        self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
+    ) -> PlainQuantity[float]:
         # Updates array power based on sun angle
         # accumulates energy into total_array_energy.
 
         # sunlight factor 0–1
-        factor : PlainQuantity[float] = Q_(self._incidence_factor(params), "dimensionless")
+        factor: PlainQuantity[float] = Q_(
+            self._incidence_factor(params), "dimensionless"
+        )
 
         # base max power
         base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
@@ -68,11 +76,12 @@ class SCPArrayModelWithIncidence(EnergyModel):
         params["array_power"] = base_power * factor
 
         # energy produced this timestep (Power × time)
-        params["array_energy"] = cast(PlainQuantity[float], params["array_power"] * timestep)
+        params["array_energy"] = cast(
+            PlainQuantity[float], params["array_power"] * timestep
+        )
 
         # accumulate total array energy over the whole race
         params["total_array_energy"] += params["array_energy"]
 
         # return energy produced this timestep
         return params["array_energy"]
-
