@@ -1,5 +1,4 @@
 from pint import UnitRegistry, Quantity
-from typing import TypeAlias
 
 UNIT_REGISTRY = UnitRegistry()
-Q_: TypeAlias = Quantity
+Q_: type[Quantity] = UNIT_REGISTRY.Quantity
