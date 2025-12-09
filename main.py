@@ -46,10 +46,11 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     )
     
     # Get start time from params with default fallback
-    current_time : datetime = cast(
-        datetime,
-        m.params.get("start_ts", datetime(2026, 7, 1, 9, 0, 0))
-    )
+    start_ts_raw = m.params.get("start_ts", datetime(2026, 7, 1, 9, 0, 0))
+    if isinstance(start_ts_raw, Quantity):
+        current_time = datetime.fromtimestamp(start_ts_raw.to("s").magnitude)
+    else:
+        current_time = start_ts_raw
     
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
     
