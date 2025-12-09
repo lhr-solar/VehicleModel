@@ -34,7 +34,8 @@ class BatteryModel(EnergyModel):
         self.loss_model: EnergyModel = ESRBatteryLossModel()
 
     @override
+    @override
     def update(
         self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
-    ):
+    ) -> PlainQuantity[float]:
         return self.loss_model.update(params, timestep)
