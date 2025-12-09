@@ -16,7 +16,7 @@ from pathlib import Path
 UNIT_REGISTRY = UnitRegistry()
 
 # Default parameters to log if none specified
-DEFAULT_LOG_PARAMS = ["velocity", "total_energy", "array_power"]
+DEFAULT_LOG_PARAMS = ('velocity', 'total_energy', 'array_power')
 
 class YAMLParam(TypedDict):
     name: str
