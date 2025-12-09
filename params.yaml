@@ -21,6 +21,14 @@
   name: mu2_rr
   unit: h/km
   value: 0.0000311
+-
+  name: f_wheel_weight
+  unit: kg
+  value: 117.5633
+-
+  name: r_wheel_weight
+  unit: kg
+  value: 92.92334
 
 # array
 -
@@ -65,3 +73,22 @@
   name: start_ts
   unit: datetime
   value: 2026-07-01 09:00:00
+  
+#battery
+
+#esr_loss_model
+  name: cell_internal_impedance 
+  unit: ohm
+  value: 0.014
+- 
+  name: cells_in_series
+  unit: dimensionless
+  value: 32
+-
+  name: cells_in_parallel
+  unit: dimensionless
+  value: 9
+-
+  name: battery_voltage_nominal
+  unit: volts
+  value: 115.2

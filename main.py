@@ -1,5 +1,6 @@
 from pint import UnitRegistry, Quantity
-from models.base import VehicleModel
+from models.vehicle_model import VehicleModel
+from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
@@ -19,10 +20,10 @@ DEFAULT_LOG_PARAMS = ["velocity", "total_energy", "array_power"]
 
 class YAMLParam(TypedDict):
     name: str
-    value: float
+    value: float 
     unit: str
 
-def parse_yaml(yaml_path: str) -> dict[str, Quantity[float]]:
+def parse_yaml(yaml_path: str) -> dict[str, datetime | Quantity[float]]:
     with open(yaml_path, "r") as file:
         data = cast(list[YAMLParam], yaml.safe_load(file))
     
@@ -178,6 +179,7 @@ def main():
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
+    m.add_model(BatteryModel())
     
     # Determine which parameters to graph (default: all logged parameters)
     graph_params = args.graph or args.log
