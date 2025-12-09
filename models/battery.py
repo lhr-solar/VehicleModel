@@ -12,7 +12,7 @@ class ESRBatteryLossModel(EnergyModel):
         params['pack_resistance'] = (params['cell_internal_impedance'] / params['cells_in_parallel']) * params['cells_in_series']
 
         #P = I^2 * R
-        params['current_draw'] = (params['drag_power'] + params['rolling_resistance_power'])/params['battery_voltage_nominal']
+        params['current_draw'] = (params['drag_power'] + params['rr_power'])/params['battery_voltage_nominal']
         params['battery_power_loss'] = (params['current_draw'] ** 2) * params['pack_resistance']
         return -params['battery_power_loss']*timestep
     
