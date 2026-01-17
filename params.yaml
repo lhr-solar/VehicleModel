@@ -47,7 +47,6 @@
  name: latitude_deg
  unit: degree
  value: 30.2672      # Austin TX
-
 -
   name: longitude_deg
   unit: degree
@@ -89,27 +88,27 @@
 # lamination optics
 -
   name: n_cover
-  unit: dimensionless
+  unit: dimensionless # How much light reflects when it hits the surface
   value: 1.5          # glass ~1.5, ETFE ~1.4
 
 -
   name: t_cover
-  unit: m
+  unit: m             # How much light gets absorbed passing through
   value: 0.001        # cover thickness (replace w real)
 
 -
-  name: alpha_cover
-  unit: 1/m
+  name: alpha_cover   #How much light is lost inside the cover
+  unit: 1/m           #How absorptive the cover material is
   value: 5            # absorption coeff (tune/replace)
 
 -
-  name: t_eva
-  unit: m
+  name: t_eva         #Extra absorption layer
+  unit: m             #Thickness of EVA encapsulant.
   value: 0.0005       # EVA thickness (replace w real)
 
 -
-  name: alpha_eva
-  unit: 1/m
+  name: alpha_eva   #How absorptive EVA is.
+  unit: 1/m           #Light lost inside EVA layer.
   value: 20           # absorption coeff (tune/replace)
 
 -
@@ -118,9 +117,9 @@
   value: 0.98          # dirt/haze/gaps (tune)
 
 -
-  name: ar_gain
+  name: ar_gain         #Anti-reflective coating gain
   unit: dimensionless
-  value: 0.0           # set 0 unless you KNOW you have AR
+  value: 0.0           # set 0 unless KNOW we have AR
 
 
 #battery

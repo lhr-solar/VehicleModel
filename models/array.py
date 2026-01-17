@@ -2,7 +2,7 @@ from models.energy_model import EnergyModel
 from typing import override
 from pint import Quantity
 import math
-
+# Optics-only model: accounts only for lamination light losses (reflection + absorption + dirt), ignoring all thermal effects.
 class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
@@ -63,7 +63,7 @@ class SCPArrayModel(EnergyModel):
         return max(0.0, min(1.0, tau))
 
     @override
-    def update(self, params: dict[str, Quantity], timestep: Quantity) -> Quantity:
+    def update(self, params: dict[str, Quantity[float]], timestep:Quantity[float]) -> Quantity[float]:
         inc = self._incidence_factor(params)
 
         base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
@@ -73,7 +73,7 @@ class SCPArrayModel(EnergyModel):
             params["array_energy"] = params["array_power"] * timestep
             return params["array_energy"]
 
-        # Convert your inc -> incidence angle for optics
+        # Convert incidence angle for optics
         theta = math.acos(max(0.0, min(1.0, inc)))
 
         # Lamination transmittance multiplier
@@ -85,7 +85,7 @@ class SCPArrayModel(EnergyModel):
         params["array_energy"] = params["array_power"] * timestep
         params["total_array_energy"] += params["array_energy"]
 
-        # Optional debug outputs (nice for plotting)
+        # Optional debug outputs 
         params["tau"] = tau
         params["theta_rad"] = theta
 
