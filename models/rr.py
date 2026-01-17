@@ -1,7 +1,7 @@
 from models.energy_model import EnergyModel
-from typing import override, cast
-from pint.facets.plain import PlainQuantity
-from pint import Quantity
+
+from typing import override
+from pint import Quantity 
 
 # A rolling resistance model for an individual wheel
 class SCPRollingResistanceModel(EnergyModel):
@@ -9,9 +9,8 @@ class SCPRollingResistanceModel(EnergyModel):
         super().__init__()
 
     @override
-    def update(self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]) -> PlainQuantity[float]:
-        # TODO
-        params['total_mu'] = cast(PlainQuantity[float], params['mu_rr'] + params['mu2_rr'] * params['velocity'])
+    def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
+        params['total_mu'] = params['mu_rr'] + params['mu2_rr'] * params['velocity']
 
         params['f_normal_force'] = (params['f_wheel_weight'] * params['grav_accel']).to('N')
         params['f_rr_force'] = (params['f_normal_force'] * params['total_mu'])
@@ -21,6 +20,6 @@ class SCPRollingResistanceModel(EnergyModel):
         params['r_rr_force'] = (params['r_normal_force'] * params['total_mu'])
         params['r_rr_power'] = -(params['r_rr_force'] * params['velocity']).to('watts')
 
-        params['rr_power'] = cast(PlainQuantity[float], 2 * params['f_rr_power'] + params['r_rr_power'])
+        params['rr_power'] = 2 * params['f_rr_power'] + params['r_rr_power']
 
         return (params['rr_power'] * timestep).to('Wh')

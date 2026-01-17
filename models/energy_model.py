@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from pint.facets.plain import PlainQuantity
 from pint import Quantity
 
 class EnergyModel(ABC):
@@ -7,6 +6,6 @@ class EnergyModel(ABC):
         pass
 
     @abstractmethod
-    def update(self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]) -> PlainQuantity[float]:
+    def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
         pass
 
