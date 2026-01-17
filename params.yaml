@@ -153,11 +153,11 @@
   unit: amperes
   value: 2.200
 -
-  name: telemtry_leader
+  name: telemetry_leader
   unit: amperes
   value: 0.900
 -
-  name: telemtry_leader_peak
+  name: telemetry_leader_peak
   unit: amperes
   value: 1.100
 -
