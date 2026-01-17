@@ -13,8 +13,7 @@ class SCPArrayModel(EnergyModel):
     def _incidence_factor(self, params: dict[str, Quantity[float]]) -> float:
         # Compute how much sunlight hits the array (0–1)
         # based on time of day + latitude.
-       
-    
+
         # Extract raw numbers
         lat_deg = params["latitude_deg"].to("degree").magnitude
         timestamp = params["timestamp"].to("second").magnitude  # seconds since midnight
@@ -22,7 +21,7 @@ class SCPArrayModel(EnergyModel):
         # Convert latitude to radians
         lat = math.radians(lat_deg)
 
-        # Time of day in seconds 
+        # Time of day in seconds
         time_of_day_s = timestamp
 
         # Convert to fractional hours for hour angle
@@ -35,10 +34,9 @@ class SCPArrayModel(EnergyModel):
         dec = 0.0
 
         # Solar elevation angle formula from book
-        sin_alpha = (
-            math.sin(lat) * math.sin(dec) +
-            math.cos(lat) * math.cos(dec) * math.cos(h)
-        )
+        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(
+            dec
+        ) * math.cos(h)
         sin_alpha = max(-1.0, min(1.0, sin_alpha))
 
         if sin_alpha <= 0:
