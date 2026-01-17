@@ -10,20 +10,6 @@ class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
 
-    @override
-    def update(
-        self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
-    ) -> PlainQuantity[float]:
-        params["array_power"] = (
-            params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
-        )
-        return params["array_power"] * timestep
-
-
-class SCPArrayModelWithIncidence(EnergyModel):
-    def __init__(self):
-        super().__init__()
-
     def _incidence_factor(self, params: dict[str, PlainQuantity[float]]) -> float:
         # Compute how much sunlight hits the array (0–1)
         # based on time of day + latitude.
