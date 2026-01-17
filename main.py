@@ -65,7 +65,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
         )
 
         # inject timestamp into model params
-        m.params["timestamp"] = sec_since_midnight * UNIT_REGISTRY.second
+        m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
 
         m.update()
 
