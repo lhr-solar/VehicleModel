@@ -14,16 +14,7 @@ class LVDrawModel(EnergyModel):
      def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]: 
         mode = params.get('enable_peak_draw', 0)
         suffix = "_peak" if mode == 1 else ""
-        total_current = 0
-        for component in self.components:
-            peak_key = f"{component}{suffix}"
-            constant_key = component
-            if peak_key in params:
-                total_current += params[peak_key]
-            elif constant_key in params:
-                total_current += params[constant_key]
-            else:
-               pass
+        total_current = sum(params.get(f"{component}{suffix}", params.get(component, 0)) for component in self.components)
         params['lv_draw_power'] = params['lv_voltage'] * total_current
 
         return -params['lv_draw_power'] * timestep
