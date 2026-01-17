@@ -20,7 +20,8 @@ class VehicleModel:
         for m in self.models:
             self.params['total_energy'] += m.update(self.params, self.params['timestep'])
         #battery update
-        self.params['total_energy'] += self.battery_model.update(self.params, self.params['timestep'])
+        if self.battery_model:
+            self.params['total_energy'] += self.battery_model.update(self.params, self.params['timestep'])
     def print_params(self):
         for k,p in self.params.items():
             print(k, p)
