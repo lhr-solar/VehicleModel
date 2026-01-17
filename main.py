@@ -57,8 +57,18 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     
     # Logging for every timestep
     for i in range(total_steps):
+        # seconds since midnight
+        sec_since_midnight = (
+            current_time.hour * 3600
+            + current_time.minute * 60
+            + current_time.second
+        )
+
+        # inject timestamp into model params
+        m.params["timestamp"] = sec_since_midnight * UNIT_REGISTRY.second
+
         m.update()
-        
+
         # Store date, time, and datetime object
         row = {
             "date": current_time.strftime("%Y-%m-%d"),
