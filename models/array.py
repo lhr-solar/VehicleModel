@@ -1,9 +1,11 @@
-from models.energy_model import EnergyModel
-from typing import override
+from typing import override, cast
+from pint.facets.plain import PlainQuantity
 from pint import Quantity
+from units import Q_
 import math
 # Optics-only model: accounts only for lamination light losses (reflection + absorption + dirt), ignoring all thermal effects.
-class SCPArrayModel(EnergyModel):
+
+  class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
 
@@ -63,8 +65,10 @@ class SCPArrayModel(EnergyModel):
         return max(0.0, min(1.0, tau))
 
     @override
-    def update(self, params: dict[str, Quantity[float]], timestep:Quantity[float]) -> Quantity[float]:
-        inc = self._incidence_factor(params)
+    def update(
+        self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
+    ) -> PlainQuantity[float]:
+      inc = self._incidence_factor(params)
 
         base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
 
