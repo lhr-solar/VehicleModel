@@ -3,7 +3,7 @@ from models.vehicle_model import VehicleModel
 from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
-from models.array import SCPArrayModel, SCPArrayModelWithIncidence
+from models.array import SCPArrayModel
 from units import UNIT_REGISTRY, Q_
 
 from pint.facets.plain import PlainQuantity
@@ -191,7 +191,7 @@ def main():
     m = VehicleModel(parse_yaml("params.yaml"))
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
-    m.add_model(SCPArrayModelWithIncidence())
+    m.add_model(SCPArrayModel())
 
     m.set_battery_model(BatteryModel())
     

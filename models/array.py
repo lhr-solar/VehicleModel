@@ -9,7 +9,7 @@ class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
 
-    def _incidence_factor(self, params: dict[str, Quantity[float]]) -> float:
+    def _incidence_factor(self, params: dict[str, PlainQuantity[float]]) -> float:
         # Compute how much sunlight hits the array (0–1)
         # based on time of day + latitude.
        
@@ -45,7 +45,7 @@ class SCPArrayModel(EnergyModel):
         return sin_alpha
 
     @override
-    def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
+    def update(self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]) -> PlainQuantity[float]:
         # Updates array power based on sun angle
         # accumulates energy into total_array_energy.
 
