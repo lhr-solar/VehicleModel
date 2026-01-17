@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pathlib import Path
 
+# Default parameters to log if none specified
+DEFAULT_LOG_PARAMS = ('velocity', 'total_energy', 'array_power')
 
 class YAMLParam(TypedDict):
     name: str
@@ -54,7 +56,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     start_ts = m.params.get(
         "start_ts", Quantity(datetime(2026, 7, 1, 9, 0, 0).timestamp())
     )
-    current_time = datetime.fromtimestamp(start_ts.to("s").magnitude)
+    current_time = datetime.fromtimestamp(start_ts.to("seconds").magnitude)
 
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
 
@@ -62,6 +64,16 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
     # Logging for every timestep
     for i in range(total_steps):
+        # seconds since midnight
+        sec_since_midnight = (
+            current_time.hour * 3600
+            + current_time.minute * 60
+            + current_time.second
+        )
+
+        # inject timestamp into model params
+        m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+
         m.update()
 
         # Store date, time, and datetime object
@@ -82,7 +94,6 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
         current_time += timedelta(seconds=timestep_seconds)
 
     return pd.DataFrame(rows)
-
 
 def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
     units_map = {}
@@ -179,8 +190,8 @@ def main():
     parser.add_argument(
         "--log",
         nargs="+",
-        help="List of parameter names to log each timestep",
-        required=True,
+        help=f"List of parameter names to log each timestep (default: {', '.join(DEFAULT_LOG_PARAMS)})",
+        default=DEFAULT_LOG_PARAMS
     )
     parser.add_argument(
         "--csv", default="log.csv", help="Output CSV filename (default: log.csv)"

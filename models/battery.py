@@ -26,6 +26,10 @@ class ESRBatteryLossModel(EnergyModel):
         ]
         return -params["battery_power_loss"] * timestep
 
+        #P = I^2 * R
+        params['current_draw'] = (params['drag_power'] + params['rr_power'])/params['battery_voltage_nominal']
+        params['battery_power_loss'] = (params['current_draw'] ** 2) * params['pack_resistance']
+        return -params['battery_power_loss']*timestep
 
 class BatteryModel(EnergyModel):
     def __init__(self):
