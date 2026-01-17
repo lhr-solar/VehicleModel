@@ -26,4 +26,4 @@ class LVDrawModel(EnergyModel):
                pass
         params['lv_draw_power'] = params['lv_voltage'] * total_current
 
-        return params['lv_draw_power'] * timestep
+        return -params['lv_draw_power'] * timestep
