@@ -10,7 +10,6 @@ class SCPRollingResistanceModel(EnergyModel):
 
     @override
     def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
-        # TODO
         params['total_mu'] = params['mu_rr'] + params['mu2_rr'] * params['velocity']
 
         params['f_normal_force'] = (params['f_wheel_weight'] * params['grav_accel']).to('N')

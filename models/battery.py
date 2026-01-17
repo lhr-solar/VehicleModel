@@ -7,7 +7,7 @@ class ESRBatteryLossModel(EnergyModel):
         pass
 
     @override
-    def update(self, params: dict[str, float], timestep: Quantity[float]) -> Quantity[float]:
+    def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]:
         #Pack Resistance
         params['pack_resistance'] = (params['cell_internal_impedance'] / params['cells_in_parallel']) * params['cells_in_series']
 
@@ -24,7 +24,7 @@ class BatteryModel(EnergyModel):
         self.loss_model = ESRBatteryLossModel()
     
     @override
-    def update(self, params: dict[str, float], timestep:Quantity[float]):
+    def update(self, params: dict[str, Quantity[float]], timestep:Quantity[float]):
         return self.loss_model.update(params, timestep)
         
     
