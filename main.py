@@ -223,18 +223,21 @@ def main():
     all_params = list(set(args.log + graph_params))
 
     # Run simulation and get results
-    df = run_simulation(m, all_params)
+    df = None
+    for speed in range(10, 50, 10):
+        m.params["velocity"] = Q_(speed, "mph")
+        df = run_simulation(m, all_params)
 
-    # Get units for all parameters after running simulation
-    units_map = get_param_units(m, all_params)
+        # Get units for all parameters after running simulation
+        units_map = get_param_units(m, all_params)
 
-    # Save to CSV
-    df_to_save = df.drop(columns=["datetime"])
-    df_to_save.to_csv(args.csv, index=False)
-    print(f"Simulation complete. Results saved to {args.csv}")
+        # Save to CSV
+        df_to_save = df.drop(columns=["datetime"])
+        df_to_save.to_csv(args.csv, index=False)
+        print(f"Simulation complete. Results saved to {args.csv}")
 
-    # Generate graphs
-    generate_graphs(df, graph_params, units_map, args.graph_output)
+        # Generate graphs
+        generate_graphs(df, graph_params, units_map, args.graph_output + str(speed))
 
 
 if __name__ == "__main__":
