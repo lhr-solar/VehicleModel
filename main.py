@@ -16,6 +16,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pathlib import Path
+import os
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
@@ -202,9 +203,9 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--graph-output",
+        "--output-dir",
         default="output",
-        help="Output directory for graphs (default: output/)",
+        help="Output directory (default: output/)",
     )
     args = parser.parse_args()
 
@@ -224,20 +225,25 @@ def main():
 
     # Run simulation and get results
     df = None
-    for speed in range(10, 50, 10):
+    for speed in range(10, 50, 1):
         m.params["velocity"] = Q_(speed, "mph")
         df = run_simulation(m, all_params)
 
         # Get units for all parameters after running simulation
         units_map = get_param_units(m, all_params)
 
+        # Create output directory
+        output_dir = args.output_dir + "_" + str(speed)
+        os.makedirs(output_dir, exist_ok=True)
+
         # Save to CSV
         df_to_save = df.drop(columns=["datetime"])
-        df_to_save.to_csv(args.csv, index=False)
-        print(f"Simulation complete. Results saved to {args.csv}")
+        csv_path = Path(output_dir) / Path(args.csv)
+        df_to_save.to_csv(csv_path, index=False)
+        print(f"Simulation complete. Results saved to {csv_path}")
 
         # Generate graphs
-        generate_graphs(df, graph_params, units_map, args.graph_output + str(speed))
+        generate_graphs(df, graph_params, units_map, output_dir)
 
 
 if __name__ == "__main__":
