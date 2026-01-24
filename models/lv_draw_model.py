@@ -8,7 +8,7 @@ class LVDrawModel(EnergyModel):
         self.components = [
          'vcu', 'controls_leader', 'horn', 'lighting', 'pi_&_display', 
          'pedals', 'camera_hub', 'battery_box', 'mppt_a', 'mppt_b', 
-         'mppt_c', 'motor_controller', 'telemetry_leader', 'pump'
+         'mppt_c', 'motor_controller', 'telemetry_leader', 'pump', 'DC_DC_converter'
         ] 
      @override
      def update(self, params: dict[str, Quantity[float]], timestep: Quantity[float]) -> Quantity[float]: 

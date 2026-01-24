@@ -192,3 +192,11 @@
   name: lv_voltage
   unit: volts
   value: 24
+-
+  name: DC_DC_converter
+  unit: amperes
+  value: 1.216    # accounts for two converters so indiv*2
+-
+  name: DC_DC_converter_peak
+  unit: amperes
+  value: 1.283
