@@ -103,8 +103,8 @@
   name: battery_voltage_nominal
   unit: volts
   value: 115.2
--
   #LV draw constants
+-
   name: enable_peak_draw
   unit: dimensionless
   value: 1
