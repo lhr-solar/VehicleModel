@@ -1,5 +1,7 @@
 from pint import UnitRegistry, Quantity
-from models.base import VehicleModel
+from models.lv_draw_model import LVDrawModel
+from models.vehicle_model import VehicleModel
+from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel

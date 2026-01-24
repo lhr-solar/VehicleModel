@@ -44,10 +44,9 @@
   unit: dimensionless
   value: 0.254
 -
- name: latitude_deg
- unit: degree
- value: 30.2672      # Austin TX
-
+  name: latitude_deg
+  unit: degree
+  value: 30.2672      # Austin TX
 -
   name: longitude_deg
   unit: degree
@@ -56,6 +55,7 @@
 - name: total_array_energy
   value: 0
   unit: joule
+
 # main
 -
   name: timestep
@@ -67,8 +67,8 @@
   value: 8
 -
   name: velocity
-  unit: km/h
-  value: 50 
+  unit: mph
+  value: 20
 -
   name: total_energy
   unit: Wh
@@ -85,10 +85,10 @@
   name: start_ts
   unit: datetime
   value: 2026-07-01 09:00:00
-  
-#battery
 
+#battery
 #esr_loss_model
+-
   name: cell_internal_impedance 
   unit: ohm
   value: 0.014
@@ -104,3 +104,105 @@
   name: battery_voltage_nominal
   unit: volts
   value: 115.2
+-
+  name: battery_max_energy
+  unit: Wh
+  value: 5240
+
+#LV draw constants
+-
+  name: enable_peak_draw
+  unit: dimensionless
+  value: 1
+-
+  name: vcu
+  unit: amperes
+  value: 0.750
+-
+  name: controls_leader
+  unit: amperes
+  value: 0.200
+-
+  name: horn
+  unit: amperes
+  value: 0.000
+-
+  name: horn_peak
+  unit: amperes
+  value: 4.000
+-
+  name: lighting
+  unit: amperes
+  value: 1.000
+-
+  name: lighting_peak
+  unit: amperes
+  value: 3.600
+-
+  name: pi_&_display
+  unit: amperes
+  value: 0.800
+-
+  name: pi_&_display_peak
+  unit: amperes
+  value: 0.850
+-
+  name: pedals
+  unit: amperes
+  value: 0.100
+-
+  name: camera_hub
+  unit: amperes
+  value: 0.050
+-
+  name: battery_box
+  unit: amperes
+  value: 1.800
+-
+  name: mppt_a
+  unit: amperes
+  value: 0.010
+-
+  name: mppt_b
+  unit: amperes
+  value: 0.010
+-
+  name: mppt_c
+  unit: amperes
+  value: 0.010
+-
+  name: motor_controller
+  unit: amperes
+  value: 1.000
+-
+  name: motor_controller_peak
+  unit: amperes
+  value: 2.200
+-
+  name: telemetry_leader
+  unit: amperes
+  value: 0.900
+-
+  name: telemetry_leader_peak
+  unit: amperes
+  value: 1.100
+-
+  name: pump
+  unit: amperes
+  value: 0.750
+-
+  name: pump_peak
+  unit: amperes
+  value: 1.250
+-
+  name: lv_voltage
+  unit: volts
+  value: 24
+-
+  name: DC_DC_converter
+  unit: amperes
+  value: 1.216    # accounts for two converters so indiv*2
+-
+  name: DC_DC_converter_peak
+  unit: amperes
+  value: 1.283

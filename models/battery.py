@@ -1,7 +1,6 @@
 from models.energy_model import EnergyModel
 from typing import override
 from pint.facets.plain import PlainQuantity
-from pint import Quantity
 
 
 class ESRBatteryLossModel(EnergyModel):
@@ -31,7 +30,7 @@ class BatteryModel(EnergyModel):
     def __init__(self):
         super().__init__()
         # esr_loss
-        self.loss_model: EnergyModel = ESRBatteryLossModel()
+        self.loss_model = ESRBatteryLossModel()
 
     @override
     def update(
