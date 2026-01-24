@@ -29,9 +29,9 @@ class VehicleModel:
             self.params, self.params["timestep"]
         )
 
-        self.params["total_energy"] = Q_(
-            max(min(self.params["total_energy"], self.params["battery_max_energy"]), 0),
-            "Wh",
+        self.params["total_energy"] = max(
+            min(self.params["total_energy"], self.params["battery_max_energy"]),
+            Q_(0, "Wh"),
         )
 
     def print_params(self):
