@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import math
@@ -14,7 +13,7 @@ from models.energy_model import EnergyModel
 
 # Optics-only model: accounts only for lamination light losses (reflection + absorption + dirt),
 # ignoring all thermal effects.
-#lamination transmittance: use tau_theta: given sun angle, how much light makes it thru lamination. models reflection at air/glass interface/ optional anti reflection coating which we dk yet because it is based on the material we are acc using, and absorption in glass (beer-lamber law)
+# lamination transmittance: use tau_theta: given sun angle, how much light makes it thru lamination. models reflection at air/glass interface/ optional anti reflection coating which we dk yet because it is based on the material we are acc using, and absorption in glass (beer-lamber law)
 class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
@@ -40,7 +39,7 @@ class SCPArrayModel(EnergyModel):
     def _tau_theta(
         self, theta: float, params: dict[str, PlainQuantity[float]]
     ) -> float:
-        #Optics-only lamination transmittance multiplier tau(theta) in [0,1].
+        # Optics-only lamination transmittance multiplier tau(theta) in [0,1].
 
         n0 = 1.0
         n1 = float(params["n_cover"].magnitude)
