@@ -23,7 +23,9 @@ class SCPArrayModel(EnergyModel):
         # sun height proxy based on latitude and time-of-day.
         # It returns sin(alpha) in [0,1], where alpha is solar altitude.
         lat_deg = params["latitude_deg"].to("degree").magnitude
-        timestamp = params["timestamp"].to("second").magnitude  # seconds since local midnight (assumed)
+        timestamp = (
+            params["timestamp"].to("second").magnitude
+        )  # seconds since local midnight (assumed)
 
         lat = math.radians(float(lat_deg))
         time_of_day_hours = float(timestamp) / 3600.0
@@ -32,13 +34,17 @@ class SCPArrayModel(EnergyModel):
         # Placeholder declination (upgrade later if you add day-of-year)
         dec = 0.0
 
-        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(dec) * math.cos(h)
+        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(
+            dec
+        ) * math.cos(h)
         sin_alpha = max(-1.0, min(1.0, float(sin_alpha)))
 
         return 0.0 if sin_alpha <= 0 else sin_alpha
 
-    # LAMINATION OPTICS 
-    def _tau_theta(self, theta: float, params: dict[str, PlainQuantity[float]]) -> float:
+    # LAMINATION OPTICS
+    def _tau_theta(
+        self, theta: float, params: dict[str, PlainQuantity[float]]
+    ) -> float:
         # Optics-only lamination transmittance multiplier tau(theta) in [0,1]
 
         n0 = 1.0
@@ -59,7 +65,7 @@ class SCPArrayModel(EnergyModel):
 
         # Optional AR boost reduces reflectance
         ar_gain = float(params["ar_gain"].magnitude) if "ar_gain" in params else 0.0
-        R *= (1.0 - ar_gain)
+        R *= 1.0 - ar_gain
 
         T_interface = max(0.0, 1.0 - R)
 
@@ -70,7 +76,9 @@ class SCPArrayModel(EnergyModel):
         a_eva = float(params["alpha_eva"].to("1/meter").magnitude)
 
         path_scale = 1.0 / max(1e-6, float(c1))
-        T_abs = math.exp(-a_cover * t_cover * path_scale) * math.exp(-a_eva * t_eva * path_scale)
+        T_abs = math.exp(-a_cover * t_cover * path_scale) * math.exp(
+            -a_eva * t_eva * path_scale
+        )
 
         tau_misc = float(params["tau_misc"].magnitude) if "tau_misc" in params else 1.0
         tau = T_interface * T_abs * tau_misc
@@ -78,11 +86,12 @@ class SCPArrayModel(EnergyModel):
         return max(0.0, min(1.0, float(tau)))
 
     # THERMAL
-    def _irradiance_from_base(self, params: dict[str, PlainQuantity[float]]) -> PlainQuantity[float]:
-        
+    def _irradiance_from_base(
+        self, params: dict[str, PlainQuantity[float]]
+    ) -> PlainQuantity[float]:
         # don't currently have irradiance (W/m^2) in params.yaml.
-        #So we back-calculate an "effective irradiance" from base electrical power:
-         
+        # So we back-calculate an "effective irradiance" from base electrical power:
+
         A = params["array_area"].to("meter^2")
         eff = params["cell_efficiency"]
         # Guard against divide by zero
@@ -90,19 +99,24 @@ class SCPArrayModel(EnergyModel):
         if eff_mag <= 0:
             return Q_(0.0, "W/m^2")
 
-        P_base = params["num_cells"] * params["p_mpp"] * eff  # has units of W (assuming p_mpp is W)
+        P_base = (
+            params["num_cells"] * params["p_mpp"] * eff
+        )  # has units of W (assuming p_mpp is W)
         G = P_base / (A * eff)  # W / (m^2) = W/m^2
         return cast(PlainQuantity[float], G.to("W/m^2"))
 
-    def _cell_temperature(self, params: dict[str, PlainQuantity[float]], G: PlainQuantity[float]) -> PlainQuantity[float]:
+    def _cell_temperature(
+        self, params: dict[str, PlainQuantity[float]], G: PlainQuantity[float]
+    ) -> PlainQuantity[float]:
         # Simple NOCT model for cell temperature (degC)
         T_amb = params["ambient_temp"].to("degC")
         noct = params["noct"].to("degC")
         T_cell = T_amb + (noct - Q_(20.0, "degC")) * (G / Q_(800.0, "W/m^2"))
         return cast(PlainQuantity[float], T_cell.to("degC"))
 
-    def _thermal_factor(self, params: dict[str, PlainQuantity[float]], T_cell: PlainQuantity[float]) -> float:
-        
+    def _thermal_factor(
+        self, params: dict[str, PlainQuantity[float]], T_cell: PlainQuantity[float]
+    ) -> float:
         beta = float(params["temp_coeff"].to("1/degC").magnitude)
         T_ref = params["t_ref"].to("degC")
         dT = float((T_cell - T_ref).to("degC").magnitude)
@@ -139,7 +153,7 @@ class SCPArrayModel(EnergyModel):
         tau = self._tau_theta(theta, params)
         tau_q = cast(PlainQuantity[float], Q_(tau, ""))  # dimensionless
 
-        # Thermal: compute T_cell and thermal_factor 
+        # Thermal: compute T_cell and thermal_factor
         # do NOT currently have irradiance in params, so we back-calc it from base power.
 
         G = self._irradiance_from_base(params)  # W/m^2
