@@ -44,10 +44,9 @@
   unit: dimensionless
   value: 0.254
 -
- name: latitude_deg
- unit: degree
- value: 30.2672      # Austin TX
-
+  name: latitude_deg
+  unit: degree
+  value: 30.2672      # Austin TX
 -
   name: longitude_deg
   unit: degree
@@ -56,6 +55,7 @@
 - name: total_array_energy
   value: 0
   unit: joule
+
 # main
 -
   name: timestep
@@ -67,8 +67,8 @@
   value: 8
 -
   name: velocity
-  unit: km/h
-  value: 50 
+  unit: mph
+  value: 20
 -
   name: total_energy
   unit: Wh
@@ -85,7 +85,8 @@
   name: start_ts
   unit: datetime
   value: 2026-07-01 09:00:00
-  #battery
+
+#battery
 #esr_loss_model
 -
   name: cell_internal_impedance 
@@ -103,7 +104,12 @@
   name: battery_voltage_nominal
   unit: volts
   value: 115.2
-  #LV draw constants
+-
+  name: battery_max_energy
+  unit: Wh
+  value: 5240
+
+#LV draw constants
 -
   name: enable_peak_draw
   unit: dimensionless
