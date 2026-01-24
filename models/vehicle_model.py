@@ -3,6 +3,7 @@ from pint.facets.plain import PlainQuantity
 from pint import Quantity
 from .battery import BatteryModel
 from .energy_model import EnergyModel
+from units import Q_
 
 
 class VehicleModel:
@@ -26,6 +27,11 @@ class VehicleModel:
 
         self.params["total_energy"] += self.battery_model.update(
             self.params, self.params["timestep"]
+        )
+
+        self.params["total_energy"] = Q_(
+            max(min(self.params["total_energy"], self.params["battery_max_energy"]), 0),
+            "Wh",
         )
 
     def print_params(self):
