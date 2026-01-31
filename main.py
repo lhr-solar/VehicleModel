@@ -207,35 +207,45 @@ def main():
         default="output",
         help="Output directory for graphs (default: output/)",
     )
+    parser.add_argument(
+        "--list-params", action="store_true", help="List all parameters in params.yaml"
+    )
     args = parser.parse_args()
 
     # Initialize vehicle model
-    m = VehicleModel(parse_yaml("params.yaml"))
+
+    params = parse_yaml("params.yaml")
+    m = VehicleModel(params)
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
 
     m.set_battery_model(BatteryModel())
 
-    # Determine which parameters to graph (default: all logged parameters)
-    graph_params = args.graph or args.log
+    if not args.list_params:
+        # Determine which parameters to graph (default: all logged parameters)
+        graph_params = args.graph or args.log
 
-    # Combine log and graph parameters to ensure all needed data is captured
-    all_params = list(set(args.log + graph_params))
+        # Combine log and graph parameters to ensure all needed data is captured
+        all_params = list(set(args.log + graph_params))
 
-    # Run simulation and get results
-    df = run_simulation(m, all_params)
+        # Run simulation and get results
+        df = run_simulation(m, all_params)
 
-    # Get units for all parameters after running simulation
-    units_map = get_param_units(m, all_params)
+        # Get units for all parameters after running simulation
+        units_map = get_param_units(m, all_params)
 
-    # Save to CSV
-    df_to_save = df.drop(columns=["datetime"])
-    df_to_save.to_csv(args.csv, index=False)
-    print(f"Simulation complete. Results saved to {args.csv}")
+        # Save to CSV
+        df_to_save = df.drop(columns=["datetime"])
+        df_to_save.to_csv(args.csv, index=False)
+        print(f"Simulation complete. Results saved to {args.csv}")
 
-    # Generate graphs
-    generate_graphs(df, graph_params, units_map, args.graph_output)
+        # Generate graphs
+        generate_graphs(df, graph_params, units_map, args.graph_output)
+
+    else:
+        for k, v in params.items():
+            print(f"{k}:\t{v}")
 
 
 if __name__ == "__main__":
