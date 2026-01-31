@@ -67,6 +67,7 @@ class MotorLossModel(EnergyModel):
         k_S = params['motor_k_S']
         eta_C = params['motor_eta_C']
         I = tau_S / k_S
+        # Convert (N·m × rpm) to Watts: 9.549 = 60/(2π) for rpm to rad/s conversion
         P_shaft = tau_S * N_rpm / Q_(9.549, 'dimensionless')
         losses = self.total_motor_loss(I, N_rpm, params)
         P_motor_input = P_shaft + losses['P_motor_total']
@@ -134,13 +135,28 @@ class MotorLossModel(EnergyModel):
     def update(
         self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
     ) -> PlainQuantity[float]:
-        # Get current operating conditions from params
-        # These should be set by the simulation based on current state
-        I = params.get('motor_current', Q_(0, 'A'))
-        N_rpm = params.get('motor_speed', Q_(0, 'rpm'))
+        # Calculate motor speed from velocity and wheel circumference
+        # N_rpm = (velocity / wheel_circumference) * 60
+        import numpy as np
+        velocity = params.get('velocity', Q_(0, 'm/s'))
+        wheel_diameter = params.get('wheel_diameter', Q_(0.5, 'm'))  
+        wheel_circumference = np.pi * wheel_diameter
+        # Convert velocity to rotational speed
+        N_rpm = (velocity / wheel_circumference * Q_(60, 's/min')).to('rpm')
+        
+        # Calculate motor current from power demands
+        # I = (drag_power + rr_power) / battery_voltage
+        drag_power = params.get('drag_power', Q_(0, 'W'))
+        rr_power = params.get('rr_power', Q_(0, 'W'))
+        battery_voltage = params.get('battery_voltage_nominal', Q_(115.2, 'V'))
+        I = (drag_power + rr_power) / battery_voltage
         
         # Calculate all motor losses
         losses = self.total_motor_loss(I, N_rpm, params)
+        
+        # Store calculated values for logging
+        params['motor_current'] = I
+        params['motor_speed'] = N_rpm
         
         # Store individual losses in params for logging
         params['motor_P_armature'] = losses['P_armature']

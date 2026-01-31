@@ -18,6 +18,3 @@ dependencies = [
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-pythonVersion = "3.13"
-pythonPlatform = "Darwin"
-typeCheckingMode = "basic"

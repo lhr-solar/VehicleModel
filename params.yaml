@@ -29,6 +29,10 @@
   name: r_wheel_weight
   unit: kg
   value: 92.92334
+-
+  name: wheel_diameter
+  unit: m
+  value: 0.5  # Typical solar car wheel diameter (~20 inches)
 
 # array
 -

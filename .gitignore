@@ -6,5 +6,3 @@ __pycache__
 .python-version
 *.csv
 output/
-run-ui.sh
-models/motor.py
