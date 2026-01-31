@@ -1,113 +1,53 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, override
 from pathlib import Path
-import yaml
+from pint.facets.plain import PlainQuantity
+from models.energy_model import EnergyModel
+from units import Q_
 
 
-# Load parameters from params.yaml
-def load_params():
-    params_file = Path(__file__).parent.parent / "params.yaml"
-    with open(params_file, 'r') as f:
-        params_list = yaml.safe_load(f)
-    params_dict = {p['name']: p['value'] for p in params_list}
-    return params_dict
-
-PARAMS = load_params()
-
-
-@dataclass
-class MotorParameters:
-    k_T: float
-    k_C: float
-    k_S: float
-    R_A: float
-    R_B: float
-    k_H: float = PARAMS['motor_k_H_default']
-    k_E: float = PARAMS['motor_k_E_default']
-    k_B1: float = PARAMS['motor_k_B1_default']
-    k_B2: float = PARAMS['motor_k_B2_default']
-    k_D: float = PARAMS['motor_k_D_default']
-    k_SW: float = PARAMS['motor_k_SW_default']
-    k_1: float = PARAMS['motor_k_1_default']
-    k_2: float = PARAMS['motor_k_2_default']
-    k_3: float = PARAMS['motor_k_3_default']
-    is_brushless: bool = PARAMS['motor_is_brushless_default']
-    eta_C: float = PARAMS['motor_eta_C_default']
-    T_ref: float = PARAMS['motor_T_ref_default']
-    T_operating: float = PARAMS['motor_T_operating_default']
+class MotorLossModel(EnergyModel):
     
-    @property
-    def R_total(self) -> float:
-        alpha = PARAMS['copper_temp_coefficient_alpha']
-        dT = self.T_operating - self.T_ref
-        R_hot = (self.R_A + self.R_B) * (1 + alpha * dT)
+    def __init__(self):
+        super().__init__()
+    
+    def R_total(self, params: dict[str, PlainQuantity[float]]) -> float:
+        alpha = params['copper_temp_coefficient_alpha'].magnitude
+        T_ref = params['motor_T_ref_default'].magnitude
+        T_operating = params['motor_T_operating_default'].magnitude
+        R_A = params['motor_R_A'].magnitude
+        R_B = params['motor_R_B'].magnitude
+        dT = T_operating - T_ref
+        R_hot = (R_A + R_B) * (1 + alpha * dT)
         return R_hot
     
-    @property
-    def R_equivalent_battery_side(self) -> float:
-        if self.is_brushless:
-            return 1.5 * self.R_total / self.eta_C
-        else:
-            return self.R_total
-
-
-class MotorLossModel:
+    def R_equivalent_battery_side(self, params: dict[str, PlainQuantity[float]]) -> float:
+        eta_C = params['motor_eta_C'].magnitude
+        return 1.5 * self.R_total(params) / eta_C
     
-    def __init__(self, params: MotorParameters):
-        self.params = params
-    
-    def armature_loss(self, I: float) -> float:
-        return I**2 * self.params.R_A
-    
-    def commutation_loss(self, I: float, N_rpm: float) -> float:
-        if self.params.is_brushless:
-            P_switching = self.params.k_SW * N_rpm
-            P_conduction = I**2 * self.params.R_B
-            return P_switching + P_conduction
-        else:
-            return I**2 * self.params.R_B
-    
-    def hysteresis_loss(self, N_rpm: float) -> float:
-        return self.params.k_H * N_rpm
-    
-    def eddy_current_loss(self, N_rpm: float) -> float:
-        return self.params.k_E * N_rpm**2
-    
-    def bearing_loss(self, N_rpm: float) -> float:
-        torque_friction = self.params.k_B1 + self.params.k_B2 * N_rpm
-        P_bearing = torque_friction * N_rpm
-        return P_bearing
-    
-    def air_drag_loss(self, N_rpm: float) -> float:
-        return self.params.k_D * N_rpm**3
-    
-    def stray_power_loss(self, N_rpm: float) -> float:
-        return (self.params.k_1 * N_rpm + 
-                self.params.k_2 * N_rpm**2 + 
-                self.params.k_3 * N_rpm**3)
-    
-    def total_motor_loss(self, I: float, N_rpm: float, 
-                        use_stray_model: bool = False) -> Dict[str, float]:
-        P_armature = self.armature_loss(I)
-        P_commutation = self.commutation_loss(I, N_rpm)
+    def total_motor_loss(self, I: float, N_rpm: float, params: dict[str, PlainQuantity[float]]) -> Dict[str, float]:
+        # Extract parameters
+        R_A = params['motor_R_A'].magnitude
+        R_B = params['motor_R_B'].magnitude
+        k_SW = params['motor_k_SW_default'].magnitude
+        k_H = params['motor_k_H_default'].magnitude
+        k_E = params['motor_k_E_default'].magnitude
+        k_B1 = params['motor_k_B1_default'].magnitude
+        k_B2 = params['motor_k_B2_default'].magnitude
+        k_D = params['motor_k_D_default'].magnitude
+        
+        # Current-dependent losses
+        P_armature = I**2 * R_A
+        P_commutation = k_SW * N_rpm + I**2 * R_B
         P_copper_total = P_armature + P_commutation
         
-        if use_stray_model and (self.params.k_1 != 0 or 
-                               self.params.k_2 != 0 or 
-                               self.params.k_3 != 0):
-            P_stray = self.stray_power_loss(N_rpm)
-            P_hysteresis = 0
-            P_eddy = 0
-            P_bearing = 0
-            P_air_drag = 0
-        else:
-            P_hysteresis = self.hysteresis_loss(N_rpm)
-            P_eddy = self.eddy_current_loss(N_rpm)
-            P_bearing = self.bearing_loss(N_rpm)
-            P_air_drag = self.air_drag_loss(N_rpm)
-            P_stray = P_hysteresis + P_eddy + P_bearing + P_air_drag
+        # Speed-dependent losses (physics-based individual models)
+        P_hysteresis = k_H * N_rpm
+        P_eddy = k_E * N_rpm**2
+        P_bearing = (k_B1 + k_B2 * N_rpm) * N_rpm
+        P_air_drag = k_D * N_rpm**3
+        P_stray = P_hysteresis + P_eddy + P_bearing + P_air_drag
         
         P_total = P_copper_total + P_stray
         
@@ -123,22 +63,19 @@ class MotorLossModel:
             'P_motor_total': P_total
         }
     
-    def motor_efficiency(self, tau_S: float, N_rpm: float,
-                        use_stray_model: bool = False) -> Dict[str, float]:
-        I = tau_S / self.params.k_S
+    def motor_efficiency(self, tau_S: float, N_rpm: float, params: dict[str, PlainQuantity[float]]) -> Dict[str, float]:
+        k_S = params['motor_k_S'].magnitude
+        eta_C = params['motor_eta_C'].magnitude
+        I = tau_S / k_S
         P_shaft = tau_S * N_rpm / 9.549
-        losses = self.total_motor_loss(I, N_rpm, use_stray_model)
+        losses = self.total_motor_loss(I, N_rpm, params)
         P_motor_input = P_shaft + losses['P_motor_total']
         eta_motor = P_shaft / P_motor_input if P_motor_input > 0 else 0
         
-        if self.params.is_brushless:
-            P_controller_loss = P_motor_input * (1/self.params.eta_C - 1)
-            P_battery_input = P_motor_input / self.params.eta_C
-            eta_system = P_shaft / P_battery_input
-        else:
-            P_controller_loss = 0
-            P_battery_input = P_motor_input
-            eta_system = eta_motor
+        # Motor is brushless
+        P_controller_loss = P_motor_input * (1/eta_C - 1)
+        P_battery_input = P_motor_input / eta_C
+        eta_system = P_shaft / P_battery_input
         
         return {
             'I': I,
@@ -153,38 +90,37 @@ class MotorLossModel:
             **losses
         }
     
-    def optimal_torque(self, N_rpm: float) -> float:
-        P_L = self.stray_power_loss(N_rpm)
-        R = self.params.R_total
-        k_S = self.params.k_S
+    def optimal_torque(self, N_rpm: float, params: dict[str, PlainQuantity[float]]) -> float:
+        # Calculate stray losses using physics-based models
+        k_H = params['motor_k_H_default'].magnitude
+        k_E = params['motor_k_E_default'].magnitude
+        k_B1 = params['motor_k_B1_default'].magnitude
+        k_B2 = params['motor_k_B2_default'].magnitude
+        k_D = params['motor_k_D_default'].magnitude
+        P_L = k_H * N_rpm + k_E * N_rpm**2 + (k_B1 + k_B2 * N_rpm) * N_rpm + k_D * N_rpm**3
+        R = self.R_total(params)
+        k_S = params['motor_k_S'].magnitude
         tau_optimal = np.sqrt(P_L * k_S**2 / R)
         return tau_optimal
     
-    def controller_loss(self, P_motor: float) -> Dict[str, float]:
-        if not self.params.is_brushless:
-            return {
-                'P_motor': P_motor,
-                'P_controller_loss': 0,
-                'P_battery': P_motor,
-                'eta_controller': 1.0
-            }
-        
-        P_controller_loss = P_motor * (1/self.params.eta_C - 1)
+    def controller_loss(self, P_motor: float, params: dict[str, PlainQuantity[float]]) -> Dict[str, float]:
+        eta_C = params['motor_eta_C'].magnitude
+        P_controller_loss = P_motor * (1/eta_C - 1)
         P_battery = P_motor + P_controller_loss
         
         return {
             'P_motor': P_motor,
             'P_controller_loss': P_controller_loss,
             'P_battery': P_battery,
-            'eta_controller': self.params.eta_C
+            'eta_controller': eta_C
         }
     
-    def system_power_analysis(self, tau_S: float, N_rpm: float, V_bus: float,
-                             use_stray_model: bool = False) -> Dict[str, float]:
-        motor_results = self.motor_efficiency(tau_S, N_rpm, use_stray_model)
+    def system_power_analysis(self, tau_S: float, N_rpm: float, V_bus: float, params: dict[str, PlainQuantity[float]]) -> Dict[str, float]:
+        motor_results = self.motor_efficiency(tau_S, N_rpm, params)
         I = motor_results['I']
-        V_emf = self.params.k_C * N_rpm
-        V_resistive = I * self.params.R_total
+        k_C = params['motor_k_C'].magnitude
+        V_emf = k_C * N_rpm
+        V_resistive = I * self.R_total(params)
         
         return {
             **motor_results,
@@ -194,9 +130,17 @@ class MotorLossModel:
             'V_required': V_emf + V_resistive
         }
     
-    def print_loss_analysis(self, tau_S: float, N_rpm: float, V_bus: float,
-                          use_stray_model: bool = False):
-        results = self.system_power_analysis(tau_S, N_rpm, V_bus, use_stray_model)
+    @override
+    def update(
+        self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
+    ) -> PlainQuantity[float]:
+        # Placeholder - motor losses can be analyzed using the other methods
+        # but are not automatically calculated during simulation
+        return Q_(0, "joule")
+    
+    def print_loss_analysis(self, tau_S: float, N_rpm: float, V_bus: float, params: dict[str, PlainQuantity[float]]):
+        results = self.system_power_analysis(tau_S, N_rpm, V_bus, params)
+        eta_C = params['motor_eta_C'].magnitude
         
         print("="*70)
         print(f"MOTOR LOSS ANALYSIS: {N_rpm:.0f} RPM, {tau_S:.2f} N·m")
@@ -214,60 +158,21 @@ class MotorLossModel:
         print(f"  Total copper:        {results['P_copper_total']:.1f} W")
         
         print(f"\nSPEED-DEPENDENT LOSSES:")
-        if use_stray_model:
-            print(f"  Stray (combined):    {results['P_stray_total']:.1f} W")
-        else:
-            print(f"  Hysteresis:          {results['P_hysteresis']:.1f} W")
-            print(f"  Eddy current:        {results['P_eddy']:.1f} W")
-            print(f"  Bearing friction:    {results['P_bearing']:.1f} W")
-            print(f"  Air drag:            {results['P_air_drag']:.1f} W")
-            print(f"  Total stray:         {results['P_stray_total']:.1f} W")
+        print(f"  Hysteresis:          {results['P_hysteresis']:.1f} W")
+        print(f"  Eddy current:        {results['P_eddy']:.1f} W")
+        print(f"  Bearing friction:    {results['P_bearing']:.1f} W")
+        print(f"  Air drag:            {results['P_air_drag']:.1f} W")
+        print(f"  Total stray:         {results['P_stray_total']:.1f} W")
         
         print(f"\nPOWER SUMMARY:")
         print(f"  Shaft output:        {results['P_shaft']:.1f} W")
         print(f"  Motor losses:        {results['P_motor_total']:.1f} W")
         print(f"  Motor input:         {results['P_motor_input']:.1f} W")
-        
-        if self.params.is_brushless:
-            print(f"  Controller loss:     {results['P_controller_loss']:.1f} W")
-            print(f"  Battery input:       {results['P_battery_input']:.1f} W")
+        print(f"  Controller loss:     {results['P_controller_loss']:.1f} W")
+        print(f"  Battery input:       {results['P_battery_input']:.1f} W")
         
         print(f"\nEFFICIENCY:")
         print(f"  Motor:               {results['eta_motor']*100:.2f}%")
-        if self.params.is_brushless:
-            print(f"  Controller:          {self.params.eta_C*100:.2f}%")
+        print(f"  Controller:          {eta_C*100:.2f}%")
         print(f"  System:              {results['eta_system']*100:.2f}%")
         print("="*70)
-
-
-def load_motor_from_params() -> MotorParameters:
-    """Load motor parameters from params.yaml"""
-    return MotorParameters(
-        k_T=PARAMS['motor_k_T'],
-        k_C=PARAMS['motor_k_C'],
-        k_S=PARAMS['motor_k_S'],
-        R_A=PARAMS['motor_R_A'],
-        R_B=PARAMS['motor_R_B'],
-        is_brushless=PARAMS['motor_is_brushless'],
-        eta_C=PARAMS['motor_eta_C']
-    )
-
-
-if __name__ == "__main__":
-    # Load motor from params.yaml
-    motor = load_motor_from_params()
-    model = MotorLossModel(motor)
-    
-    # Print motor configuration
-    print("\n" + "="*70)
-    print("MOTOR CONFIGURATION FROM params.yaml")
-    print("="*70)
-    print(f"Motor Type:          {'Brushless' if motor.is_brushless else 'Brushed'}")
-    print(f"Torque Constant:     {motor.k_T:.4f} N·m/A")
-    print(f"Voltage Constant:    {motor.k_C:.4f} V·min/rad")
-    print(f"Speed Constant:      {motor.k_S:.4f} N·m/A")
-    print(f"Armature Resistance: {motor.R_A:.4f} Ω")
-    print(f"Field Resistance:    {motor.R_B:.4f} Ω")
-    print(f"Controller Eff.:     {motor.eta_C*100:.1f}%")
-    print(f"Operating Temp:      {motor.T_operating:.1f}°C")
-    print("="*70 + "\n")

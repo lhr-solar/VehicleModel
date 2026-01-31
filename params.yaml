@@ -263,10 +263,6 @@
   name: motor_k_3_default
   unit: W/rpm^3
   value: 0.0
--
-  name: motor_is_brushless_default
-  unit: dimensionless
-  value: false
 
 # Motor parameters - general configuration for the vehicle's motor
 -
@@ -289,10 +285,6 @@
   name: motor_R_B
   unit: ohm
   value: 0.0233
--
-  name: motor_is_brushless
-  unit: dimensionless
-  value: true
 -
   name: motor_eta_C
   unit: dimensionless
