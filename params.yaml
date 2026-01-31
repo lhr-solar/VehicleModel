@@ -141,13 +141,20 @@
   unit: degC
   value: 25
 -
-  name: noct
+  name: noct #How hot the solar cells typically get in real outdoor conditions
   unit: degC
   value: 45
 -
   name: irradiance_clears
   unit: W/m^2
   value: 1000
+
+- 
+  name: mppt_efficiency
+  unit: dimensionless
+  value: 0.98
+
+#battery
 
 #battery
 #esr_loss_model
