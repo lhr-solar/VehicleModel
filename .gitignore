@@ -5,6 +5,6 @@ uv.lock
 __pycache__
 .python-version
 *.csv
-output/ui.py
+output/
 run-ui.sh
 models/motor.py
