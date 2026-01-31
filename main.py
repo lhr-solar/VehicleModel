@@ -8,7 +8,6 @@ from models.array import SCPArrayModel
 from units import UNIT_REGISTRY, Q_
 
 from pint.facets.plain import PlainQuantity
-from pint import Quantity
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
 import yaml
@@ -57,11 +56,8 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     start_ts = m.params.get(
         "start_ts", Q_(datetime(2026, 7, 1, 9, 0, 0).timestamp(), "seconds")
     )
-    assert start_ts is not None, "start_ts parameter is required"
     current_time = datetime.fromtimestamp(start_ts.to("seconds").magnitude)
-    timestep_param = m.params["timestep"]
-    assert timestep_param is not None
-    timestep_seconds = timestep_param.to("seconds").magnitude
+    timestep_seconds = m.params["timestep"].to("seconds").magnitude
 
     rows: list[dict] = []
 
@@ -86,7 +82,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
         for name in log_params:
             value = m.params.get(name)
-            if value is not None and isinstance(value, Quantity):
+            if isinstance(value, Quantity):
                 row[name] = value.magnitude
             else:
                 row[name] = value
@@ -101,7 +97,7 @@ def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
     units_map = {}
     for param in params:
         value = m.params.get(param)
-        if value is not None and isinstance(value, Quantity):
+        if isinstance(value, Quantity):
             units_map[param] = f"{value.units:~}"  # Compact unit format
         else:
             units_map[param] = "dimensionless"
@@ -212,12 +208,13 @@ def main():
     args = parser.parse_args()
 
     # Initialize vehicle model
+
     m = VehicleModel(parse_yaml("params.yaml"))
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
-
     m.set_battery_model(BatteryModel())
+
     # Determine which parameters to graph (default: all logged parameters)
     graph_params = args.graph or args.log
 
