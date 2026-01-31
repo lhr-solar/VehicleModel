@@ -48,6 +48,15 @@
   unit: degree
   value: 30.2672      # Austin TX
 -
+# motor operating conditions (test values)
+  name: motor_current
+  unit: A
+  value: 50
+-
+  name: motor_speed
+  unit: rpm
+  value: 3000
+-
   name: longitude_deg
   unit: degree
   value: -97.7431     # Austin TX
