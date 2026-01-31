@@ -38,7 +38,7 @@ class SCPArrayModel(EnergyModel):
 
         return 0.0 if sin_alpha <= 0 else sin_alpha
 
-    # LAMINATION OPTICS 
+    # LAMINATION OPTICS
     def _tau_theta(
         self, theta: float, params: dict[str, PlainQuantity[float]]
     ) -> float:
