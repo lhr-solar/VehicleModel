@@ -1,4 +1,7 @@
-from typing import override
+try:
+    from typing import override  # Python 3.12+
+except ImportError:
+    from typing_extensions import override  # type: ignore
 from pint.facets.plain import PlainQuantity
 from .energy_model import EnergyModel
 from units import Q_

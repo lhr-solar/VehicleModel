@@ -206,3 +206,94 @@
   name: DC_DC_converter_peak
   unit: amperes
   value: 1.283
+
+# motor_losses
+# Temperature coefficient for copper resistance
+-
+  name: copper_temp_coefficient_alpha
+  unit: 1/°C
+  value: 0.00393
+
+# Default motor parameters
+-
+  name: motor_eta_C_default
+  unit: dimensionless
+  value: 0.97
+-
+  name: motor_T_ref_default
+  unit: °C
+  value: 25.0
+-
+  name: motor_T_operating_default
+  unit: °C
+  value: 70.0
+-
+  name: motor_k_H_default
+  unit: W/rpm
+  value: 0.0
+-
+  name: motor_k_E_default
+  unit: W/rpm^2
+  value: 0.0
+-
+  name: motor_k_B1_default
+  unit: N·m
+  value: 0.0
+-
+  name: motor_k_B2_default
+  unit: N·m·min/rad
+  value: 0.0
+-
+  name: motor_k_D_default
+  unit: W/rpm^3
+  value: 0.0
+-
+  name: motor_k_SW_default
+  unit: W/rpm
+  value: 0.0
+-
+  name: motor_k_1_default
+  unit: W/rpm
+  value: 0.0
+-
+  name: motor_k_2_default
+  unit: W/rpm^2
+  value: 0.0
+-
+  name: motor_k_3_default
+  unit: W/rpm^3
+  value: 0.0
+-
+  name: motor_is_brushless_default
+  unit: dimensionless
+  value: false
+
+# Motor parameters - general configuration for the vehicle's motor
+-
+  name: motor_k_T
+  unit: N·m/A
+  value: 0.1910
+-
+  name: motor_k_C
+  unit: V·min/rad
+  value: 0.020
+-
+  name: motor_k_S
+  unit: N·m/A
+  value: 0.1910
+-
+  name: motor_R_A
+  unit: ohm
+  value: 0.0931
+-
+  name: motor_R_B
+  unit: ohm
+  value: 0.0233
+-
+  name: motor_is_brushless
+  unit: dimensionless
+  value: true
+-
+  name: motor_eta_C
+  unit: dimensionless
+  value: 0.97

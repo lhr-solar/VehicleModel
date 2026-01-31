@@ -2,6 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 from typing import Dict
+from pathlib import Path
+import yaml
+
+
+# Load parameters from params.yaml
+def load_params():
+    params_file = Path(__file__).parent.parent / "params.yaml"
+    with open(params_file, 'r') as f:
+        params_list = yaml.safe_load(f)
+    params_dict = {p['name']: p['value'] for p in params_list}
+    return params_dict
+
+PARAMS = load_params()
 
 
 @dataclass
@@ -11,23 +24,23 @@ class MotorParameters:
     k_S: float
     R_A: float
     R_B: float
-    k_H: float = 0.0
-    k_E: float = 0.0
-    k_B1: float = 0.0
-    k_B2: float = 0.0
-    k_D: float = 0.0
-    k_SW: float = 0.0
-    k_1: float = 0.0
-    k_2: float = 0.0
-    k_3: float = 0.0
-    is_brushless: bool = False
-    eta_C: float = 0.97
-    T_ref: float = 25.0
-    T_operating: float = 70.0
+    k_H: float = PARAMS['motor_k_H_default']
+    k_E: float = PARAMS['motor_k_E_default']
+    k_B1: float = PARAMS['motor_k_B1_default']
+    k_B2: float = PARAMS['motor_k_B2_default']
+    k_D: float = PARAMS['motor_k_D_default']
+    k_SW: float = PARAMS['motor_k_SW_default']
+    k_1: float = PARAMS['motor_k_1_default']
+    k_2: float = PARAMS['motor_k_2_default']
+    k_3: float = PARAMS['motor_k_3_default']
+    is_brushless: bool = PARAMS['motor_is_brushless_default']
+    eta_C: float = PARAMS['motor_eta_C_default']
+    T_ref: float = PARAMS['motor_T_ref_default']
+    T_operating: float = PARAMS['motor_T_operating_default']
     
     @property
     def R_total(self) -> float:
-        alpha = 0.00393
+        alpha = PARAMS['copper_temp_coefficient_alpha']
         dT = self.T_operating - self.T_ref
         R_hot = (self.R_A + self.R_B) * (1 + alpha * dT)
         return R_hot
@@ -227,63 +240,34 @@ class MotorLossModel:
         print("="*70)
 
 
-def create_example_motor_BRLS8() -> MotorParameters:
-    k_0 = 4.0578
-    k_01 = -3.4388e-4
-    k_02 = 1.8342e-8
-    k_1 = 0.01114
-    k_2 = 2.1575e-6
-    k_3 = 0.0
-    
-    k_C = 0.020
-    k_S = k_C * 9.549
-    k_T = k_S
-    
-    R_over_kS2 = k_0 + k_01*3000 + k_02*3000**2
-    R_total = R_over_kS2 * k_S**2
-    R_A = 0.8 * R_total
-    R_B = 0.2 * R_total
-    
+def load_motor_from_params() -> MotorParameters:
+    """Load motor parameters from params.yaml"""
     return MotorParameters(
-        k_T=k_T,
-        k_C=k_C,
-        k_S=k_S,
-        R_A=R_A,
-        R_B=R_B,
-        k_1=k_1,
-        k_2=k_2,
-        k_3=k_3,
-        is_brushless=True,
-        eta_C=0.97
-    )
-
-
-def create_example_motor_HSSS3810() -> MotorParameters:
-    return MotorParameters(
-        k_T=0.2152,
-        k_C=0.02254,
-        k_S=0.2152,
-        R_A=0.048,
-        R_B=0.012,
-        is_brushless=False,
-        eta_C=1.0
+        k_T=PARAMS['motor_k_T'],
+        k_C=PARAMS['motor_k_C'],
+        k_S=PARAMS['motor_k_S'],
+        R_A=PARAMS['motor_R_A'],
+        R_B=PARAMS['motor_R_B'],
+        is_brushless=PARAMS['motor_is_brushless'],
+        eta_C=PARAMS['motor_eta_C']
     )
 
 
 if __name__ == "__main__":
-    motor_params = create_example_motor_BRLS8()
-    model = MotorLossModel(motor_params)
+    # Load motor from params.yaml
+    motor = load_motor_from_params()
+    model = MotorLossModel(motor)
     
-    print("\nEXAMPLE 1: CRUISING")
-    model.print_loss_analysis(tau_S=5.0, N_rpm=3800, V_bus=84.0, 
-                             use_stray_model=True)
-    
-    print("\n\nEXAMPLE 2: HILL CLIMBING")
-    model.print_loss_analysis(tau_S=10.0, N_rpm=2000, V_bus=84.0,
-                             use_stray_model=True)
-    
-    print("\n\nEXAMPLE 3: OPTIMAL TORQUE AT 3000 RPM")
-    tau_opt = model.optimal_torque(N_rpm=3000)
-    print(f"\nOptimal torque: {tau_opt:.2f} N·m")
-    model.print_loss_analysis(tau_S=tau_opt, N_rpm=3000, V_bus=84.0,
-                             use_stray_model=True)
+    # Print motor configuration
+    print("\n" + "="*70)
+    print("MOTOR CONFIGURATION FROM params.yaml")
+    print("="*70)
+    print(f"Motor Type:          {'Brushless' if motor.is_brushless else 'Brushed'}")
+    print(f"Torque Constant:     {motor.k_T:.4f} N·m/A")
+    print(f"Voltage Constant:    {motor.k_C:.4f} V·min/rad")
+    print(f"Speed Constant:      {motor.k_S:.4f} N·m/A")
+    print(f"Armature Resistance: {motor.R_A:.4f} Ω")
+    print(f"Field Resistance:    {motor.R_B:.4f} Ω")
+    print(f"Controller Eff.:     {motor.eta_C*100:.1f}%")
+    print(f"Operating Temp:      {motor.T_operating:.1f}°C")
+    print("="*70 + "\n")
