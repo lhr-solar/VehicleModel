@@ -119,7 +119,8 @@ class SCPArrayModel(EnergyModel):
     ) -> float:
         beta = float(params["temp_coeff"].to("1/degC").magnitude)
         T_ref = params["t_ref"].to("degC")
-        dT = float((T_cell - T_ref).to("degC").magnitude)
+        dT = float((T_cell - T_ref).to("delta_degC").magnitude)
+
         return max(0.0, 1.0 - beta * dT)
 
     @override

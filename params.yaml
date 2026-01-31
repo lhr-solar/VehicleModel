@@ -44,9 +44,9 @@
   unit: dimensionless
   value: 0.254
 -
- name: latitude_deg
- unit: degree
- value: 30.2672      # Austin TX
+  name: latitude_deg
+  unit: degree
+  value: 30.2672      # Austin TX
 -
   name: longitude_deg
   unit: degree
@@ -121,6 +121,29 @@
   name: ar_gain         #Anti-reflective coating gain
   unit: dimensionless
   value: 0.0           # set 0 unless KNOW we have AR
+
+-
+  name: array_area
+  unit: m^2
+  value: 3.0   # replace with real module area
+
+-
+  name: ambient_temp
+  unit: degC
+  value: 25
+-
+  name: temp_coeff
+  unit: 1/degC
+  value: 0.0035
+
+-
+  name: t_ref
+  unit: degC
+  value: 25
+-
+  name: noct
+  unit: degC
+  value: 45
 
 
 #battery
