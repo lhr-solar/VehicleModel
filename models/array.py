@@ -127,7 +127,7 @@ class SCPArrayModel(EnergyModel):
         tau_q = cast(PlainQuantity[float], Q_(tau, ""))  # dimensionless
 
         # Irradiance model: clear-sky peak scaled by sun height proxy
-        # (simple + causal; replace later with measured irradiance if you have it)
+        # (simple + causal; replace later with measured irradiance)
         G_clear = params.get("irradiance_clear", Q_(1000.0, "W/m^2")).to("W/m^2")
         G = cast(PlainQuantity[float], (G_clear * inc).to("W/m^2"))
 
