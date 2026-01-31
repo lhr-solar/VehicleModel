@@ -137,18 +137,17 @@ class MotorLossModel(EnergyModel):
     ) -> PlainQuantity[float]:
         # Calculate motor speed from velocity and wheel circumference
         # N_rpm = (velocity / wheel_circumference) * 60
-        import numpy as np
-        velocity = params.get('velocity', Q_(0, 'm/s'))
-        wheel_diameter = params.get('wheel_diameter', Q_(0.5, 'm'))  
+        velocity = params['velocity']
+        wheel_diameter = params['wheel_diameter']
         wheel_circumference = np.pi * wheel_diameter
         # Convert velocity to rotational speed
         N_rpm = (velocity / wheel_circumference * Q_(60, 's/min')).to('rpm')
         
         # Calculate motor current from power demands
         # I = (drag_power + rr_power) / battery_voltage
-        drag_power = params.get('drag_power', Q_(0, 'W'))
-        rr_power = params.get('rr_power', Q_(0, 'W'))
-        battery_voltage = params.get('battery_voltage_nominal', Q_(115.2, 'V'))
+        drag_power = params['drag_power']
+        rr_power = params['rr_power']
+        battery_voltage = params['battery_voltage_nominal']
         I = (drag_power + rr_power) / battery_voltage
         
         # Calculate all motor losses
@@ -158,16 +157,16 @@ class MotorLossModel(EnergyModel):
         params['motor_current'] = I
         params['motor_speed'] = N_rpm
         
-        # Store individual losses in params for logging
-        params['motor_P_armature'] = losses['P_armature']
-        params['motor_P_commutation'] = losses['P_commutation']
-        params['motor_P_copper_total'] = losses['P_copper_total']
-        params['motor_P_hysteresis'] = losses['P_hysteresis']
-        params['motor_P_eddy'] = losses['P_eddy']
-        params['motor_P_bearing'] = losses['P_bearing']
-        params['motor_P_air_drag'] = losses['P_air_drag']
-        params['motor_P_stray_total'] = losses['P_stray_total']
-        params['motor_P_total'] = losses['P_motor_total']
+        # Store individual losses in params for logging (standardized to watts)
+        params['motor_P_armature'] = losses['P_armature'].to('W')
+        params['motor_P_commutation'] = losses['P_commutation'].to('W')
+        params['motor_P_copper_total'] = losses['P_copper_total'].to('W')
+        params['motor_P_hysteresis'] = losses['P_hysteresis'].to('W')
+        params['motor_P_eddy'] = losses['P_eddy'].to('W')
+        params['motor_P_bearing'] = losses['P_bearing'].to('W')
+        params['motor_P_air_drag'] = losses['P_air_drag'].to('W')
+        params['motor_P_stray_total'] = losses['P_stray_total'].to('W')
+        params['motor_P_total'] = losses['P_motor_total'].to('W')
         
         # Return energy lost in this timestep (negative because it's a loss)
         return -losses['P_motor_total'] * timestep

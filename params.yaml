@@ -32,7 +32,7 @@
 -
   name: wheel_diameter
   unit: m
-  value: 0.5  # Typical solar car wheel diameter (~20 inches)
+  value: 0.547624
 
 # array
 -
@@ -51,15 +51,6 @@
   name: latitude_deg
   unit: degree
   value: 30.2672      # Austin TX
--
-# motor operating conditions (test values)
-  name: motor_current
-  unit: A
-  value: 50
--
-  name: motor_speed
-  unit: rpm
-  value: 3000
 -
   name: longitude_deg
   unit: degree
@@ -221,49 +212,54 @@
   value: 1.283
 
 # motor_losses
-# Temperature coefficient for copper resistance
+# Temperature coefficient for copper resistance (α) - how much resistance increases per °C
 -
   name: copper_temp_coefficient_alpha
   unit: 1/°C
   value: 0.00393
 
-# Default motor parameters
+# Default motor loss model parameters
+# k_H: Hysteresis loss coefficient (magnetic domain flipping in core)
+# k_E: Eddy current loss coefficient (induced circulating currents in core)
+# k_B1, k_B2: Bearing friction coefficients (mechanical friction)
+# k_D: Air drag coefficient (windage from rotor spinning)
+# k_SW: Commutation switching loss coefficient (brushless motor switching)
 -
   name: motor_eta_C_default
   unit: dimensionless
-  value: 0.97
+  value: 0.97  # Controller efficiency
 -
   name: motor_T_ref_default
   unit: °C
-  value: 25.0
+  value: 25.0  # Reference temperature for resistance measurements
 -
   name: motor_T_operating_default
   unit: °C
-  value: 70.0
+  value: 70.0  # Operating temperature
 -
   name: motor_k_H_default
   unit: W/rpm
-  value: 0.0
+  value: 0.0  # Hysteresis loss
 -
   name: motor_k_E_default
   unit: W/rpm^2
-  value: 0.0
+  value: 0.0  # Eddy current loss
 -
   name: motor_k_B1_default
   unit: N·m
-  value: 0.0
+  value: 0.0  # Bearing friction constant term
 -
   name: motor_k_B2_default
   unit: N·m·min/rad
-  value: 0.0
+  value: 0.0  # Bearing friction speed-dependent term
 -
   name: motor_k_D_default
   unit: W/rpm^3
-  value: 0.0
+  value: 0.0  # Air drag loss
 -
   name: motor_k_SW_default
   unit: W/rpm
-  value: 0.0
+  value: 0.0  # Commutation switching loss
 -
   name: motor_k_1_default
   unit: W/rpm
@@ -281,24 +277,24 @@
 -
   name: motor_k_T
   unit: N·m/A
-  value: 0.1910
+  value: 0.1910  # Torque constant
 -
   name: motor_k_C
   unit: V·min/rad
-  value: 0.020
+  value: 0.020  # Back-EMF constant
 -
   name: motor_k_S
   unit: N·m/A
-  value: 0.1910
+  value: 0.1910  # Torque sensitivity (typically same as k_T)
 -
   name: motor_R_A
   unit: ohm
-  value: 0.0931
+  value: 0.0931  # Armature resistance
 -
   name: motor_R_B
   unit: ohm
-  value: 0.0233
+  value: 0.0233  # Brush/commutation resistance
 -
   name: motor_eta_C
   unit: dimensionless
-  value: 0.97
+  value: 0.97  # Controller efficiency
