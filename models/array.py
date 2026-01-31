@@ -18,14 +18,11 @@ class SCPArrayModel(EnergyModel):
     def __init__(self):
         super().__init__()
 
-    # --- SUN / GEOMETRY -------------------------------------------------
+    # SUN / GEOMETRY
     def _incidence_factor(self, params: dict[str, PlainQuantity[float]]) -> float:
-        # sun height proxy based on latitude and time-of-day.
-        # It returns sin(alpha) in [0,1], where alpha is solar altitude.
+        # Returns sin(alpha) in [0,1], where alpha is solar altitude.
         lat_deg = params["latitude_deg"].to("degree").magnitude
-        timestamp = (
-            params["timestamp"].to("second").magnitude
-        )  # seconds since local midnight (assumed)
+        timestamp = params["timestamp"].to("second").magnitude  # seconds since midnight
 
         lat = math.radians(float(lat_deg))
         time_of_day_hours = float(timestamp) / 3600.0
@@ -41,12 +38,11 @@ class SCPArrayModel(EnergyModel):
 
         return 0.0 if sin_alpha <= 0 else sin_alpha
 
-    # LAMINATION OPTICS
+    # LAMINATION OPTICS 
     def _tau_theta(
         self, theta: float, params: dict[str, PlainQuantity[float]]
     ) -> float:
         # Optics-only lamination transmittance multiplier tau(theta) in [0,1]
-
         n0 = 1.0
         n1 = float(params["n_cover"].magnitude)
 
@@ -66,7 +62,6 @@ class SCPArrayModel(EnergyModel):
         # Optional AR boost reduces reflectance
         ar_gain = float(params["ar_gain"].magnitude) if "ar_gain" in params else 0.0
         R *= 1.0 - ar_gain
-
         T_interface = max(0.0, 1.0 - R)
 
         # Beer–Lambert absorption (path length increases by 1/cos(theta1))
@@ -86,25 +81,6 @@ class SCPArrayModel(EnergyModel):
         return max(0.0, min(1.0, float(tau)))
 
     # THERMAL
-    def _irradiance_from_base(
-        self, params: dict[str, PlainQuantity[float]]
-    ) -> PlainQuantity[float]:
-        # don't currently have irradiance (W/m^2) in params.yaml.
-        # So we back-calculate an "effective irradiance" from base electrical power:
-
-        A = params["array_area"].to("meter^2")
-        eff = params["cell_efficiency"]
-        # Guard against divide by zero
-        eff_mag = float(eff.magnitude)
-        if eff_mag <= 0:
-            return Q_(0.0, "W/m^2")
-
-        P_base = (
-            params["num_cells"] * params["p_mpp"] * eff
-        )  # has units of W (assuming p_mpp is W)
-        G = P_base / (A * eff)  # W / (m^2) = W/m^2
-        return cast(PlainQuantity[float], G.to("W/m^2"))
-
     def _cell_temperature(
         self, params: dict[str, PlainQuantity[float]], G: PlainQuantity[float]
     ) -> PlainQuantity[float]:
@@ -120,7 +96,6 @@ class SCPArrayModel(EnergyModel):
         beta = float(params["temp_coeff"].to("1/degC").magnitude)
         T_ref = params["t_ref"].to("degC")
         dT = float((T_cell - T_ref).to("delta_degC").magnitude)
-
         return max(0.0, 1.0 - beta * dT)
 
     @override
@@ -131,9 +106,6 @@ class SCPArrayModel(EnergyModel):
     ) -> PlainQuantity[float]:
         inc = self._incidence_factor(params)
 
-        # Base electrical power (before incidence/optics/thermal)
-        base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
-
         # Normalize timestep to seconds quantity
         if isinstance(timestep, timedelta):
             timestep_s: PlainQuantity[float] = Q_(float(timestep.total_seconds()), "s")
@@ -142,7 +114,7 @@ class SCPArrayModel(EnergyModel):
 
         # Nighttime / no sun
         if inc <= 0.0:
-            params["array_power"] = 0.0 * base_power
+            params["array_power"] = Q_(0.0, "W")
             energy0 = cast(PlainQuantity[float], params["array_power"] * timestep_s)
             params["array_energy"] = energy0
             return energy0
@@ -154,21 +126,27 @@ class SCPArrayModel(EnergyModel):
         tau = self._tau_theta(theta, params)
         tau_q = cast(PlainQuantity[float], Q_(tau, ""))  # dimensionless
 
-        # Thermal: compute T_cell and thermal_factor
-        # do NOT currently have irradiance in params, so we back-calc it from base power.
+        # Irradiance model: clear-sky peak scaled by sun height proxy
+        # (simple + causal; replace later with measured irradiance if you have it)
+        G_clear = params.get("irradiance_clear", Q_(1000.0, "W/m^2")).to("W/m^2")
+        G = cast(PlainQuantity[float], (G_clear * inc).to("W/m^2"))
 
-        G = self._irradiance_from_base(params)  # W/m^2
-        T_cell = self._cell_temperature(params, G)  # degC
-        f_T = self._thermal_factor(params, T_cell)  # scalar
+        # Thermal: compute T_cell and thermal_factor
+        T_cell = self._cell_temperature(params, G)
+        f_T = self._thermal_factor(params, T_cell)
         f_T_q = cast(PlainQuantity[float], Q_(f_T, ""))
 
-        # Power including incidence, optics, and thermal derate
-        params["array_power"] = base_power * inc * tau_q * f_T_q
+        # Electrical power from irradiance (direction-correct physics)
+        A = params["array_area"].to("m^2")
+        eta = params["cell_efficiency"]  # dimensionless
+        params["array_power"] = cast(
+            PlainQuantity[float], (G * A * eta * tau_q * f_T_q).to("W")
+        )
 
         energy = cast(PlainQuantity[float], params["array_power"] * timestep_s)
         params["array_energy"] = energy
 
-        # Accumulate total array energy (avoid "+=" to keep pyright calm)
+        # Accumulate total array energy
         total_prev = cast(PlainQuantity[float], params["total_array_energy"])
         params["total_array_energy"] = cast(PlainQuantity[float], total_prev + energy)
 
