@@ -149,9 +149,6 @@
   unit: W/m^2
   value: 1000
 
-
-#battery
-
 #battery
 #esr_loss_model
 -
