@@ -145,7 +145,7 @@
   unit: degC
   value: 45
 -
-  name: irradiance_clear
+  name: irradiance_clears
   unit: W/m^2
   value: 1000
 
