@@ -67,6 +67,8 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
     # Logging for every timestep
     for i in range(total_steps):
+        current_time += timedelta(seconds=timestep_seconds)
+
         # seconds since midnight
         sec_since_midnight = (
             current_time.hour * 3600 + current_time.minute * 60 + current_time.second
@@ -92,7 +94,6 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
                 row[name] = value
 
         rows.append(row)
-        current_time += timedelta(seconds=timestep_seconds)
 
     return pd.DataFrame(rows)
 
@@ -291,28 +292,24 @@ def main():
             graph_params,
             capture_params,
         )
+    else:
+        # Run simulation and get results
+        df = run_simulation(m, capture_params)
 
-    # Run simulation and get results
-    # df = None
-    # for speed in range(10, 50, 1):
-    #     m.params["velocity"] = Q_(speed, "mph")
-    #     df = run_simulation(m, all_params)
-    #
-    #     # Get units for all parameters after running simulation
-    #     units_map = get_param_units(m, all_params)
-    #
-    #     # Create output directory
-    #     output_dir = args.output_dir + "_" + str(speed)
-    #     os.makedirs(output_dir, exist_ok=True)
-    #
-    #     # Save to CSV
-    #     df_to_save = df.drop(columns=["datetime"])
-    #     csv_path = Path(output_dir) / Path(args.csv)
-    #     df_to_save.to_csv(csv_path, index=False)
-    #     print(f"Simulation complete. Results saved to {csv_path}")
-    #
-    #     # Generate graphs
-    #     generate_graphs(df, graph_params, units_map, output_dir)
+        # Get units for all parameters after running simulation
+        units_map = get_param_units(m, capture_params)
+
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+
+        # Save to CSV
+        df_to_save = df.drop(columns=["datetime"])
+        csv_path = Path(args.output_dir) / Path(args.csv)
+        df_to_save.to_csv(csv_path, index=False)
+        print(f"Simulation complete. Results saved to {csv_path}")
+
+        # Generate graphs
+        generate_graphs(df, graph_params, units_map, args.output_dir)
 
 
 if __name__ == "__main__":
