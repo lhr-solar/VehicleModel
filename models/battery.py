@@ -1,8 +1,5 @@
 from models.energy_model import EnergyModel
-try:
-    from typing import override  # Python 3.12+
-except ImportError:
-    from typing_extensions import override  # type: ignore
+from typing import override
 from pint.facets.plain import PlainQuantity
 
 
