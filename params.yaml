@@ -145,8 +145,8 @@
   unit: degC #standard test conditions (could be checked w specific module datasheet)
   value: 45
 -
-  name: irradiance_clears
-  unit: W/m^2
+  name: irradiance_clears # maximum irradiance when the sun is high and the sky is cleard
+  unit: W/m^2  # made it max because dont have weather model ...
   value: 1000
 
 - 
