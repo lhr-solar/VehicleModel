@@ -67,8 +67,6 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
     # Logging for every timestep
     for i in range(total_steps):
-        current_time += timedelta(seconds=timestep_seconds)
-
         # seconds since midnight
         sec_since_midnight = (
             current_time.hour * 3600 + current_time.minute * 60 + current_time.second
@@ -94,6 +92,8 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
                 row[name] = value
 
         rows.append(row)
+
+        current_time += timedelta(seconds=timestep_seconds)
 
     return pd.DataFrame(rows)
 
@@ -145,9 +145,6 @@ def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str
     ax.set_title(f"{param} Over Time", fontsize=14, fontweight="bold", pad=20)
 
     ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
-
-    if param == "total_energy":
-        ax.set_ylim(0, 5240)
 
     plt.tight_layout()
 
@@ -211,7 +208,7 @@ def grid_search(
             config_output_dir += f"{k}_{v:~#P}_"
 
         config_output_dir = config_output_dir[:-1].replace(" ", "_")
-        config_output_dir = output_dir + "/" + config_output_dir
+        config_output_dir = os.path.join(output_dir, config_output_dir)
 
         os.makedirs(config_output_dir, exist_ok=True)
 
@@ -281,8 +278,13 @@ def main():
         search_params = {}
 
         for item in args.grid_search:
-            name, start, stop, step, unit = item.split(":")
-            search_params[name] = (float(start), float(stop), float(step), unit)
+            try:
+                name, start, stop, step, unit = item.split(":")
+                search_params[name] = (float(start), float(stop), float(step), unit)
+            except ValueError:
+                print(
+                    f"Warning: Skipping invalid grid search parameter '{item}'. Expected format 'name:start:stop:step:unit'."
+                )
 
         grid_search(
             search_params,
