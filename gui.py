@@ -13,6 +13,7 @@ from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.battery import BatteryModel
 from units import Q_
+from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 
 
 class SimulationGUI:
@@ -228,6 +229,7 @@ class SimulationGUI:
             # Run simulation
             self.df = run_simulation(m, log_params)
             self.units_map = get_param_units(m, log_params)
+            self.params = params  # Store for dynamic graph limits
             
             self._log(f"Simulation complete! Processed {len(self.df)} timesteps")
             
@@ -238,7 +240,7 @@ class SimulationGUI:
                 if param not in self.df.columns:
                     invalid_params.append(param)
                     self._log(f"ERROR: Parameter '{param}' not found in simulation results!")
-                elif self.df[param].isna().all() or (self.df[param] == None).all():
+                elif self.df[param].isna().all():
                     invalid_params.append(param)
                     self._log(f"ERROR: Parameter '{param}' has no data to plot (all values are empty)!")
                 else:
@@ -316,8 +318,10 @@ class SimulationGUI:
             ax.set_title(f"{param} Over Time", fontsize=12, fontweight='bold', pad=10)
             ax.grid(True, alpha=0.3, linestyle='--', linewidth=0.5)
             
-            if param == "total_energy":
-                ax.set_ylim(0, 5240)
+            # Set dynamic y-axis limit for total_energy based on user input
+            if param == "total_energy" and hasattr(self, 'params') and 'total_energy' in self.params:
+                max_energy = self.params['total_energy'].to('Wh').magnitude
+                ax.set_ylim(0, max_energy)
             
             fig.tight_layout()
             
@@ -327,7 +331,6 @@ class SimulationGUI:
             canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
             
             # Add toolbar
-            from matplotlib.backends._backend_tk import NavigationToolbar2Tk
             toolbar = NavigationToolbar2Tk(canvas, tab_frame)
             toolbar.update()
 
