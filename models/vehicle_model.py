@@ -10,7 +10,11 @@ class VehicleModel:
     def __init__(self, init_params: dict[str, PlainQuantity[float]]):
         self.battery_model: BatteryModel = BatteryModel()
         self.models: list[EnergyModel] = []
+        self.init_params = init_params
         self.params: dict[str, PlainQuantity[float]] = init_params.copy()
+
+    def reset(self):
+        self.params = self.init_params.copy()
 
     def add_model(self, model: EnergyModel):
         self.models.append(model)

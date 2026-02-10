@@ -226,6 +226,8 @@ def grid_search(
         # Generate graphs
         generate_graphs(df, graph_params, units_map, config_output_dir)
 
+        m.reset()
+
 
 def main():
     # Command-line arguments
