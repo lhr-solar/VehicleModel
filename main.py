@@ -7,6 +7,7 @@ from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
+from models.weather_model import WeatherModel
 from units import UNIT_REGISTRY, Q_
 
 from typing import TypedDict, cast
@@ -23,6 +24,7 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
+
 
 class YAMLParam(TypedDict):
     name: str
@@ -63,6 +65,30 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     current_time = datetime.fromtimestamp(start_ts.to("seconds").magnitude)
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
 
+    # Initialize weather model if enabled
+    weather_model = None
+    if m.params.get("use_weather_data", Q_(0, "dimensionless")).magnitude > 0:
+        try:
+            weather_model = WeatherModel()
+            latitude = m.params["latitude_deg"].magnitude
+            longitude = m.params["longitude_deg"].magnitude
+
+            # Calculate end time
+            end_time = current_time + timedelta(seconds=timestep_seconds * total_steps)
+
+            print(
+                f"Fetching weather data for {latitude}, {longitude} from {current_time} to {end_time}..."
+            )
+            weather_model.fetch_weather_data(
+                latitude, longitude, current_time, end_time
+            )
+            print("Weather data loaded successfully")
+        except Exception as e:
+            print(
+                f"Warning: Failed to load weather data: {str(e)}. Continuing without weather effects."
+            )
+            weather_model = None
+
     rows: list[dict] = []
 
     # Logging for every timestep
@@ -74,6 +100,51 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
         # inject timestamp into model params
         m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+
+        # Apply weather modifiers if available
+        if weather_model is not None:
+            weather = weather_model.get_weather_at_time(current_time)
+
+            # Cloud cover modifier (affects array)
+            if (
+                m.params.get(
+                    "weather_cloud_modifier_enabled", Q_(1, "dimensionless")
+                ).magnitude
+                > 0
+            ):
+                cloud_mod = weather_model.get_cloud_cover_modifier(
+                    weather["cloud_cover"]
+                )
+                m.params["weather_cloud_modifier"] = Q_(cloud_mod, "dimensionless")
+
+            # Wind modifier (affects drag)
+            if (
+                m.params.get(
+                    "weather_wind_modifier_enabled", Q_(1, "dimensionless")
+                ).magnitude
+                > 0
+            ):
+                heading = m.params.get("vehicle_heading", Q_(0, "degree")).magnitude
+                wind_mod = weather_model.get_wind_modifier(
+                    weather["wind_speed"], heading
+                )
+                m.params["weather_wind_modifier"] = Q_(wind_mod, "dimensionless")
+
+            # Road condition modifier (affects rolling resistance)
+            road_mod = weather_model.get_rolling_resistance_modifier(
+                weather["cloud_cover"]
+            )
+            m.params["weather_road_modifier"] = Q_(road_mod, "dimensionless")
+
+            # Store weather data for logging
+            m.params["weather_temperature"] = Q_(weather["temperature"], "celsius")
+            m.params["weather_cloud_cover"] = Q_(
+                weather["cloud_cover"], "dimensionless"
+            )
+            m.params["weather_wind_speed"] = Q_(weather["wind_speed"], "m/s")
+            m.params["weather_solar_radiation"] = Q_(
+                weather["solar_radiation"], "W/m^2"
+            )
 
         m.update()
 
