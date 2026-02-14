@@ -201,14 +201,12 @@ def grid_search(
     search_configs = [dict(zip(keys, values)) for values in product(*ranges)]
 
     for config in search_configs:
-        config_output_dir = ""
+        config_output_dir = os.path.join(output_dir, "grid_search")
 
         for k, v in config.items():
             m.params[k] = v
-            config_output_dir += f"{os.path.basename(k)}_{v:~#P}_"
-
-        config_output_dir = config_output_dir[:-1].replace(" ", "_")
-        config_output_dir = os.path.join(output_dir, config_output_dir)
+            subdir = f"{os.path.basename(k)}_{v:~#P}".replace(" ", "_")
+            config_output_dir = os.path.join(config_output_dir, subdir)
 
         os.makedirs(config_output_dir, exist_ok=True)
 

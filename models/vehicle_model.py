@@ -6,6 +6,7 @@ from .energy_model import EnergyModel
 from units import Q_
 import copy
 
+
 class VehicleModel:
     def __init__(self, init_params: dict[str, PlainQuantity[float]]):
         self.battery_model: BatteryModel = BatteryModel()
