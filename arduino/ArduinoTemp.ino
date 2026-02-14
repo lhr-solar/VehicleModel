@@ -1,20 +1,20 @@
 // Analog pin connected to the voltage divider midpoint
-int ThermistorPin = 0;
+const int ThermistorPin = A0;
 
 // Raw analog value read from the pin (0–1023)
 int Vo;
 
 // Known fixed resistor value 
-float R1 = 10000;
+const float R1 = 10000.0;
 
 // Variables for thermistor math
 float logR2, R2;     // thermistor resistance and its natural log
 float T, Tc, Tf;    // temperature in Kelvin, Celsius, Fahrenheit
 
 // Steinhart–Hart coefficients for the thermistor
-float c1 = 1.009249522e-03;
-float c2 = 2.378405444e-04;
-float c3 = 2.019202697e-07;
+const float c1 = 1.009249522e-03;
+const float c2 = 2.378405444e-04;
+const float c3 = 2.019202697e-07;
 
 void setup() {
   // Start serial communication so we can see values in Serial Monitor
@@ -37,7 +37,7 @@ void loop() {
   logR2 = log(R2);
 
   // Apply Steinhart–Hart equation to get temperature in Kelvin
-  T = 1.0 / (c1 + c2 * logR2 + c3 * logR2 * logR2 * logR2);
+  T = 1.0 / (c1 + logR2 * (c2 + c3 * logR2 * logR2));
 
   // Convert Kelvin to Celsius
   Tc = T - 273.15;
