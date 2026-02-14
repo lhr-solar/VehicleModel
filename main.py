@@ -9,10 +9,6 @@ from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
 from units import UNIT_REGISTRY, Q_
 
-<<<<<<< HEAD
-from pint.facets.plain import PlainQuantity
-=======
->>>>>>> origin
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
 import yaml
