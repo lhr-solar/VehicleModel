@@ -1,4 +1,5 @@
 from pint import UnitRegistry, Quantity
+from pint.facets.plain import PlainQuantity
 from models.lv_draw_model import LVDrawModel
 from models.vehicle_model import VehicleModel
 from models.battery import BatteryModel
@@ -7,8 +8,6 @@ from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from units import UNIT_REGISTRY, Q_
 
-from pint.facets.plain import PlainQuantity
-from pint import Quantity
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
 import yaml
@@ -16,7 +15,10 @@ import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import numpy as np
 from pathlib import Path
+import os
+from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
@@ -90,6 +92,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
                 row[name] = value
 
         rows.append(row)
+
         current_time += timedelta(seconds=timestep_seconds)
 
     return pd.DataFrame(rows)
@@ -182,6 +185,48 @@ def generate_graphs(
         create_graph(df, param, param_unit, str(output_file))
 
 
+def grid_search(
+    search_params: dict[str, tuple[float, float, float, str]],
+    output_dir: str,
+    csv_name: str,
+    m: VehicleModel,
+    graph_params: list[str],
+    capture_params: list[str],
+):
+    keys = list(search_params.keys())
+    ranges = [
+        [Q_(v, unit) for v in np.arange(start, stop, step)]
+        for (start, stop, step, unit) in search_params.values()
+    ]
+    search_configs = [dict(zip(keys, values)) for values in product(*ranges)]
+
+    for config in search_configs:
+        config_output_dir = os.path.join(output_dir, "grid_search")
+
+        for k, v in config.items():
+            m.params[k] = v
+            subdir = f"{os.path.basename(k)}_{v:~#P}".replace(" ", "_")
+            config_output_dir = os.path.join(config_output_dir, subdir)
+
+        os.makedirs(config_output_dir, exist_ok=True)
+
+        df = run_simulation(m, capture_params)
+
+        # Get units for all parameters after running simulation
+        units_map = get_param_units(m, capture_params)
+
+        # Save to CSV
+        df_to_save = df.drop(columns=["datetime"])
+        csv_path = Path(config_output_dir) / Path(csv_name).name
+        df_to_save.to_csv(csv_path, index=False)
+        print(f"Simulation complete. Results saved to {csv_path}")
+
+        # Generate graphs
+        generate_graphs(df, graph_params, units_map, config_output_dir)
+
+        m.reset()
+
+
 def main():
     # Command-line arguments
     parser = argparse.ArgumentParser(
@@ -203,9 +248,15 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--graph-output",
+        "--output-dir",
         default="output",
-        help="Output directory for graphs (default: output/)",
+        help="Output directory (default: output/)",
+    )
+    parser.add_argument(
+        "--grid-search",
+        nargs="*",
+        help="List of parameter ranges, steps, and units to iterate over. Example: velocity:10:50:1:mph",
+        default=None,
     )
     args = parser.parse_args()
 
@@ -221,21 +272,46 @@ def main():
     graph_params = args.graph or args.log
 
     # Combine log and graph parameters to ensure all needed data is captured
-    all_params = list(set(args.log + graph_params))
+    capture_params = list(set(args.log + graph_params))
 
-    # Run simulation and get results
-    df = run_simulation(m, all_params)
+    if args.grid_search is not None:
+        search_params = {}
 
-    # Get units for all parameters after running simulation
-    units_map = get_param_units(m, all_params)
+        for item in args.grid_search:
+            try:
+                name, start, stop, step, unit = item.split(":")
+                search_params[name] = (float(start), float(stop), float(step), unit)
+            except ValueError:
+                print(
+                    f"Warning: Skipping invalid grid search parameter '{item}'. Expected format 'name:start:stop:step:unit'."
+                )
 
-    # Save to CSV
-    df_to_save = df.drop(columns=["datetime"])
-    df_to_save.to_csv(args.csv, index=False)
-    print(f"Simulation complete. Results saved to {args.csv}")
+        grid_search(
+            search_params,
+            args.output_dir,
+            args.csv,
+            m,
+            graph_params,
+            capture_params,
+        )
+    else:
+        # Run simulation and get results
+        df = run_simulation(m, capture_params)
 
-    # Generate graphs
-    generate_graphs(df, graph_params, units_map, args.graph_output)
+        # Get units for all parameters after running simulation
+        units_map = get_param_units(m, capture_params)
+
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+
+        # Save to CSV
+        df_to_save = df.drop(columns=["datetime"])
+        csv_path = Path(args.output_dir) / Path(args.csv).name
+        df_to_save.to_csv(csv_path, index=False)
+        print(f"Simulation complete. Results saved to {csv_path}")
+
+        # Generate graphs
+        generate_graphs(df, graph_params, units_map, args.output_dir)
 
 
 if __name__ == "__main__":
