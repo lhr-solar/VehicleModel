@@ -1,6 +1,9 @@
+#include <math.h>
+
 // Analog pin connected to the voltage divider midpoint
 const int ThermistorPin = A0;
 
+<<<<<<< HEAD
 // Raw analog value read from the pin (0–1023)
 int Vo;
 
@@ -10,6 +13,10 @@ const float R1 = 10000.0;
 // Variables for thermistor math
 float logR2, R2;     // thermistor resistance and its natural log
 float T, Tc, Tf;    // temperature in Kelvin, Celsius, Fahrenheit
+=======
+// Known fixed resistor value (ohms)
+const float R1 = 10000.0;
+>>>>>>> 1401e72 (added timestamps)
 
 // Steinhart–Hart coefficients for the thermistor
 const float c1 = 1.009249522e-03;
@@ -17,50 +24,74 @@ const float c2 = 2.378405444e-04;
 const float c3 = 2.019202697e-07;
 
 void setup() {
-  // Start serial communication so we can see values in Serial Monitor
+  // Start serial communication
   Serial.begin(9600);
 }
 
 void loop() {
+  // Timestamp in milliseconds since the Arduino started
+  unsigned long timestamp_ms = millis();
 
-  // Read the analog voltage from the thermistor voltage divider
-  Vo = analogRead(ThermistorPin);
+  // Read analog value from thermistor voltage divider (0–1023)
+  int Vo = analogRead(ThermistorPin);
 
-  // Convert ADC value to actual voltage (0–5V range)
+  // Safety check to prevent division by zero or invalid readings
+  if (Vo <= 0 || Vo >= 1023) {
+    Serial.print("[");
+    Serial.print(timestamp_ms);
+    Serial.print(" ms] ");
+
+    Serial.print("Raw ADC: ");
+    Serial.print(Vo);
+    Serial.println(" | ERROR: invalid reading (check wiring / open circuit)");
+
+    delay(500);
+    return;
+  }
+
+  // Convert ADC value to voltage (0–5 V)
   float voltage = Vo * (5.0 / 1023.0);
 
-  // Calculate thermistor resistance using the voltage divider equation
-  // Assumes: 5V -> R1 -> A0 -> thermistor -> GND
-  R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  // Circuit assumption:
+  // 5V -> Thermistor (R2) -> A0 -> Fixed resistor (R1) -> GND
+  // Voltage divider math:
+  // R2 = R1 * (1023 / Vo - 1)
+  float R2 = R1 * (1023.0 / (float)Vo - 1.0);
 
-  // Take natural logarithm of the thermistor resistance
-  logR2 = log(R2);
+  // Natural log of thermistor resistance
+  float logR2 = log(R2);
 
+<<<<<<< HEAD
   // Apply Steinhart–Hart equation to get temperature in Kelvin
   T = 1.0 / (c1 + logR2 * (c2 + c3 * logR2 * logR2));
+=======
+  // Steinhart–Hart equation (temperature in Kelvin)
+  float T = 1.0 / (c1 + logR2 * (c2 + c3 * logR2 * logR2));
+>>>>>>> 1401e72 (added timestamps)
 
-  // Convert Kelvin to Celsius
-  Tc = T - 273.15;
+  // Convert temperature units
+  float Tc = T - 273.15;              // Kelvin → Celsius
+  float Tf = (Tc * 9.0) / 5.0 + 32.0; // Celsius → Fahrenheit
 
-  // Convert Celsius to Fahrenheit
-  Tf = (Tc * 9.0) / 5.0 + 32.0;
+  // Print timestamp
+  Serial.print("[");
+  Serial.print(timestamp_ms);
+  Serial.print(" ms] ");
 
-  // Print raw ADC reading
-  Serial.print("Raw ADC: ");
+  // Print sensor readings
+  Serial.print("ADC: ");
   Serial.print(Vo);
 
-  // Print measured voltage
   Serial.print(" | Voltage: ");
   Serial.print(voltage, 3);
   Serial.print(" V");
 
-  // Print temperature in Fahrenheit and Celsius
-  Serial.print(" | Temperature: ");
-  Serial.print(Tf);
-  Serial.print(" F; ");
-  Serial.print(Tc);
-  Serial.println(" C");
+  Serial.print(" | Temp: ");
+  Serial.print(Tf, 2);
+  Serial.print(" F (");
+  Serial.print(Tc, 2);
+  Serial.println(" C)");
 
-  // Small delay to slow down serial output
+  // Delay to slow output
   delay(500);
 }
