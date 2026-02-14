@@ -12,71 +12,53 @@ const float c2 = 2.378405444e-04;
 const float c3 = 2.019202697e-07;
 
 void setup() {
-  // Start serial communication
   Serial.begin(9600);
 }
 
 void loop() {
-  // Timestamp in milliseconds since the Arduino started
-  unsigned long timestamp_ms = millis();
-
-  // Read analog value from thermistor voltage divider (0–1023)
+  // Read ADC value (0–1023)
   int Vo = analogRead(ThermistorPin);
 
-  // Safety check to prevent division by zero or invalid readings
+  // Safety check: avoid division-by-zero and extreme readings
+  // Vo == 0 can happen if the circuit is open, Vo == 1023 can happen if it's shorted to 5V
   if (Vo <= 0 || Vo >= 1023) {
-    Serial.print("[");
-    Serial.print(timestamp_ms);
-    Serial.print(" ms] ");
-
     Serial.print("Raw ADC: ");
     Serial.print(Vo);
     Serial.println(" | ERROR: invalid reading (check wiring / open circuit)");
-
     delay(500);
     return;
   }
 
-  // Convert ADC value to voltage (0–5 V)
+  // Convert ADC reading to voltage (0–5V range)
   float voltage = Vo * (5.0 / 1023.0);
 
-  // Circuit assumption:
+  // Circuit assumption for THIS formula:
   // 5V -> Thermistor (R2) -> A0 -> Fixed resistor (R1) -> GND
-  // Voltage divider math:
-  // R2 = R1 * (1023 / Vo - 1)
+  // Then: R2 = R1 * (1023/Vo - 1)
   float R2 = R1 * (1023.0 / (float)Vo - 1.0);
 
-  // Natural log of thermistor resistance
   float logR2 = log(R2);
 
-  // Steinhart–Hart equation (temperature in Kelvin)
+  // Steinhart–Hart equation (Kelvin)
   float T = 1.0 / (c1 + logR2 * (c2 + c3 * logR2 * logR2));
 
-  // Convert temperature units
-  float Tc = T - 273.15;              // Kelvin → Celsius
-  float Tf = (Tc * 9.0) / 5.0 + 32.0; // Celsius → Fahrenheit
+  // Convert to Celsius / Fahrenheit
+  float Tc = T - 273.15;
+  float Tf = (Tc * 9.0) / 5.0 + 32.0;
 
-  // Print timestamp
-  Serial.print("[");
-  Serial.print(timestamp_ms);
-  Serial.print(" ms] ");
-
-  // Print sensor readings
-  Serial.print("ADC: ");
+  // Print values
+  Serial.print("Raw ADC: ");
   Serial.print(Vo);
 
   Serial.print(" | Voltage: ");
   Serial.print(voltage, 3);
   Serial.print(" V");
 
-  Serial.print(" | Temp: ");
+  Serial.print(" | Temperature: ");
   Serial.print(Tf, 2);
-  Serial.print(" F (");
+  Serial.print(" F; ");
   Serial.print(Tc, 2);
-  Serial.println(" C)");
+  Serial.println(" C");
 
-  // Delay to slow output
   delay(500);
 }
-
-
