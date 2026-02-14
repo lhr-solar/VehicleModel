@@ -10,16 +10,6 @@ class MotorLossModel(EnergyModel):
     def __init__(self):
         super().__init__()
     
-    def R_total(self, params: dict[str, PlainQuantity[float]]) -> PlainQuantity[float]:
-        alpha = params['copper_temp_coefficient_alpha']
-        T_ref = params['motor_T_ref_default']
-        T_operating = params['motor_T_operating_default']
-        R_A = params['motor_R_A']
-        R_B = params['motor_R_B']
-        dT = T_operating - T_ref
-        R_hot = (R_A + R_B) * (1 + alpha * dT)
-        return R_hot
-    
     def total_motor_loss(self, I: PlainQuantity[float], N_rpm: PlainQuantity[float], params: dict[str, PlainQuantity[float]]) -> Dict[str, PlainQuantity[float]]:
         # Extract parameters
         R_A = params['motor_R_A']
