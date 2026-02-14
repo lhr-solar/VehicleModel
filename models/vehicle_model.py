@@ -4,17 +4,17 @@ from pint import Quantity
 from .battery import BatteryModel
 from .energy_model import EnergyModel
 from units import Q_
-
+import copy
 
 class VehicleModel:
     def __init__(self, init_params: dict[str, PlainQuantity[float]]):
         self.battery_model: BatteryModel = BatteryModel()
         self.models: list[EnergyModel] = []
         self.init_params = init_params
-        self.params: dict[str, PlainQuantity[float]] = init_params.copy()
+        self.params: dict[str, PlainQuantity[float]] = copy.deepcopy(init_params)
 
     def reset(self):
-        self.params = self.init_params.copy()
+        self.params = copy.deepcopy(self.init_params)
 
     def add_model(self, model: EnergyModel):
         self.models.append(model)

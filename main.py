@@ -186,7 +186,7 @@ def generate_graphs(
 
 
 def grid_search(
-    search_params: dict[str, tuple[int, int, int, str]],
+    search_params: dict[str, tuple[float, float, float, str]],
     output_dir: str,
     csv_name: str,
     m: VehicleModel,
@@ -205,7 +205,7 @@ def grid_search(
 
         for k, v in config.items():
             m.params[k] = v
-            config_output_dir += f"{k}_{v:~#P}_"
+            config_output_dir += f"{os.path.basename(k)}_{v:~#P}_"
 
         config_output_dir = config_output_dir[:-1].replace(" ", "_")
         config_output_dir = os.path.join(output_dir, config_output_dir)
@@ -219,7 +219,7 @@ def grid_search(
 
         # Save to CSV
         df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(config_output_dir) / Path(csv_name)
+        csv_path = Path(config_output_dir) / Path(csv_name).name
         df_to_save.to_csv(csv_path, index=False)
         print(f"Simulation complete. Results saved to {csv_path}")
 
@@ -276,7 +276,7 @@ def main():
     # Combine log and graph parameters to ensure all needed data is captured
     capture_params = list(set(args.log + graph_params))
 
-    if args.grid_search != None:
+    if args.grid_search is not None:
         search_params = {}
 
         for item in args.grid_search:
@@ -308,7 +308,7 @@ def main():
 
         # Save to CSV
         df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(args.output_dir) / Path(args.csv)
+        csv_path = Path(args.output_dir) / Path(args.csv).name
         df_to_save.to_csv(csv_path, index=False)
         print(f"Simulation complete. Results saved to {csv_path}")
 
