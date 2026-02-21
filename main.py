@@ -24,7 +24,8 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
-matplotlib.use("Agg") 
+matplotlib.use("Agg")
+
 
 class YAMLParam(TypedDict):
     name: str
