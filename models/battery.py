@@ -11,10 +11,19 @@ class ESRBatteryLossModel(EnergyModel):
     def update(
         self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
     ) -> PlainQuantity[float]:
-        # Pack Resistance
-        params["pack_resistance"] = (
+        # Get temperature modifier if weather is enabled
+        temp_modifier = params.get("weather_temp_modifier", None)
+
+        # Pack Resistance (increases with temperature)
+        base_resistance = (
             params["cell_internal_impedance"] / params["cells_in_parallel"]
         ) * params["cells_in_series"]
+
+        if temp_modifier is not None:
+            # Higher temps increase resistance, lowering efficiency
+            params["pack_resistance"] = base_resistance / temp_modifier
+        else:
+            params["pack_resistance"] = base_resistance
 
         # P = I^2 * R
         params["current_draw"] = (params["drag_power"] + params["rr_power"]) / params[

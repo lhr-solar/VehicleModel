@@ -13,10 +13,17 @@ class SCPRollingResistanceModel(EnergyModel):
     def update(
         self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
     ) -> PlainQuantity[float]:
+        # Get road condition modifier if weather is enabled
+        road_modifier = params.get("weather_road_modifier", None)
+        if road_modifier is not None:
+            mu_rr_effective = params["mu_rr"] * road_modifier
+        else:
+            mu_rr_effective = params["mu_rr"]
+
         # TODO
         params["total_mu"] = cast(
             PlainQuantity[float],
-            params["mu_rr"] + params["mu2_rr"] * params["velocity"],
+            mu_rr_effective + params["mu2_rr"] * params["velocity"],
         )
 
         params["f_normal_force"] = (params["f_wheel_weight"] * params["grav_accel"]).to(

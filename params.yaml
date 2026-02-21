@@ -50,11 +50,11 @@
 -
   name: latitude_deg
   unit: degree
-  value: 30.2672      # Austin TX
+  value: 30.3893301
 -
   name: longitude_deg
   unit: degree
-  value: -97.7431     # Austin TX
+  value: -97.7275654
   
 - name: total_array_energy
   value: 0
@@ -72,7 +72,7 @@
 -
   name: velocity
   unit: mph
-  value: 20
+  value: 40
 -
   name: total_energy
   unit: Wh
@@ -88,7 +88,7 @@
 -
   name: start_ts
   unit: datetime
-  value: 2026-07-01 09:00:00
+  value: 2024-07-01 09:00:00
 
 #battery
 #esr_loss_model
@@ -298,3 +298,20 @@
   name: motor_eta_C
   unit: dimensionless
   value: 0.97  # Controller efficiency
+# Weather & Location
+-
+  name: use_weather_data
+  unit: dimensionless
+  value: 1  # 1 = enabled, 0 = disabled
+-
+  name: weather_wind_modifier_enabled
+  unit: dimensionless
+  value: 1
+-
+  name: weather_cloud_modifier_enabled
+  unit: dimensionless
+  value: 1
+-
+  name: vehicle_heading
+  unit: degree
+  value: 0  # Direction car is traveling (0=N, 90=E, 180=S, 270=W)

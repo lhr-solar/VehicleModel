@@ -7,6 +7,7 @@ from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
+from models.weather_model import WeatherModel
 from units import UNIT_REGISTRY, Q_
 
 from typing import TypedDict, cast
@@ -23,6 +24,7 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
+
 
 class YAMLParam(TypedDict):
     name: str
@@ -63,6 +65,30 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     current_time = datetime.fromtimestamp(start_ts.to("seconds").magnitude)
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
 
+    # Initialize weather model if enabled
+    weather_model = None
+    if m.params.get("use_weather_data", Q_(0, "dimensionless")).magnitude > 0:
+        try:
+            weather_model = WeatherModel()
+            latitude = m.params["latitude_deg"].magnitude
+            longitude = m.params["longitude_deg"].magnitude
+
+            # Calculate end time
+            end_time = current_time + timedelta(seconds=timestep_seconds * total_steps)
+
+            print(
+                f"Fetching weather data for {latitude}, {longitude} from {current_time} to {end_time}..."
+            )
+            weather_model.fetch_weather_data(
+                latitude, longitude, current_time, end_time
+            )
+            print("Weather data loaded successfully")
+        except Exception as e:
+            print(
+                f"Warning: Failed to load weather data: {str(e)}. Continuing without weather effects."
+            )
+            weather_model = None
+
     rows: list[dict] = []
 
     # Logging for every timestep
@@ -74,6 +100,54 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
         # inject timestamp into model params
         m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+
+        # Apply weather modifiers if available
+        if weather_model is not None:
+            weather = weather_model.get_weather_at_time(current_time)
+
+            # Temperature modifier (affects battery capacity)
+            temp_mod = weather_model.get_temperature_modifier(weather["temperature"])
+            m.params["weather_temp_modifier"] = Q_(temp_mod, "dimensionless")
+
+            # Cloud cover modifier (affects array)
+            if (
+                m.params.get(
+                    "weather_cloud_modifier_enabled", Q_(1, "dimensionless")
+                ).magnitude
+                > 0
+            ):
+                cloud_mod = weather_model.get_cloud_cover_modifier(
+                    weather["cloud_cover"]
+                )
+                m.params["weather_cloud_modifier"] = Q_(cloud_mod, "dimensionless")
+
+            # Wind modifier (affects drag)
+            if (
+                m.params.get(
+                    "weather_wind_modifier_enabled", Q_(1, "dimensionless")
+                ).magnitude
+                > 0
+            ):
+                heading = m.params.get("vehicle_heading", Q_(0, "degree")).magnitude
+                vehicle_speed = m.params["velocity"].to("m/s").magnitude
+                wind_mod = weather_model.get_wind_modifier(
+                    weather["wind_speed"], weather["wind_direction"], heading, vehicle_speed
+                )
+                m.params["weather_wind_modifier"] = Q_(wind_mod, "dimensionless")
+
+            # Road condition modifier (affects rolling resistance)
+            road_mod = weather_model.get_rolling_resistance_modifier(
+                weather["precipitation"]
+            )
+            m.params["weather_road_modifier"] = Q_(road_mod, "dimensionless")
+
+            # Store weather data for logging
+            m.params["weather_temperature"] = Q_(weather["temperature"], "celsius")
+            m.params["weather_cloud_cover"] = Q_(
+                weather["cloud_cover"], "dimensionless"
+            )
+            m.params["weather_wind_speed"] = Q_(weather["wind_speed"], "m/s")
+            m.params["weather_wind_direction"] = Q_(weather["wind_direction"], "degree")
 
         m.update()
 
@@ -95,7 +169,13 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
         current_time += timedelta(seconds=timestep_seconds)
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    
+    # Create weather graph if weather data was used
+    if weather_model is not None and weather_model.weather_data is not None:
+        create_weather_graph(df, "output")
+    
+    return df
 
 
 def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
@@ -153,6 +233,65 @@ def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str
     plt.close()
 
     print(f"Graph saved to {output_path}")
+
+
+def create_weather_graph(df: pd.DataFrame, output_dir: str = "output"):
+    """Create a 2x2 panel graph showing all weather variables over time."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    weather_params = ["weather_temperature", "weather_cloud_cover", "weather_wind_speed", "weather_wind_direction"]
+    
+    # Check if weather data exists
+    available_params = [p for p in weather_params if p in df.columns]
+    if not available_params:
+        print("No weather data available to graph")
+        return
+    
+    plt.style.use("seaborn-v0_8-darkgrid")
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle("Weather Conditions Over Race Duration", fontsize=16, fontweight="bold")
+    
+    weather_config = {
+        "weather_temperature": {"ylabel": "Temperature (°C)", "color": "#FF6B6B"},
+        "weather_cloud_cover": {"ylabel": "Cloud Cover (%)", "color": "#4ECDC4"},
+        "weather_wind_speed": {"ylabel": "Wind Speed (m/s)", "color": "#45B7D1"},
+        "weather_wind_direction": {"ylabel": "Wind Direction (°)", "color": "#96CEB4"}
+    }
+    
+    for idx, param in enumerate(weather_params):
+        if param not in df.columns:
+            continue
+            
+        ax = axes[idx // 2, idx % 2]
+        config = weather_config[param]
+        
+        ax.plot(
+            df["datetime"],
+            df[param],
+            marker="o",
+            linestyle="-",
+            linewidth=2,
+            markersize=4,
+            color=config["color"],
+            markevery=max(1, len(df) // 20)
+        )
+        
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+        
+        ax.set_xlabel("Time", fontsize=11, fontweight="bold")
+        ax.set_ylabel(config["ylabel"], fontsize=11, fontweight="bold")
+        ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
+    
+    plt.tight_layout()
+    
+    output_file = output_path / "weather_conditions.png"
+    plt.savefig(output_file, bbox_inches="tight", facecolor="white", edgecolor="none", dpi=150)
+    plt.close()
+    
+    print(f"Weather graph saved to {output_file}")
 
 
 def generate_graphs(
