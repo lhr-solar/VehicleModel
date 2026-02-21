@@ -1,0 +1,3 @@
+[submodule "extern/Aurora"]
+	path = extern/Aurora
+	url = https://github.com/lhr-solar/Aurora.git
