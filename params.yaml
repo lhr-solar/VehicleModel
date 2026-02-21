@@ -89,6 +89,76 @@
   name: start_ts
   unit: datetime
   value: 2026-07-01 09:00:00
+  
+# lamination optics
+-
+  name: n_cover
+  unit: dimensionless # How much light reflects when it hits the surface
+  value: 1.5          # glass ~1.5, ETFE ~1.4
+
+-
+  name: t_cover
+  unit: m             # How much light gets absorbed passing through
+  value: 0.001        # cover thickness (replace w real)
+
+-
+  name: alpha_cover   #How much light is lost inside the cover
+  unit: 1/m           #How absorptive the cover material is
+  value: 5            # absorption coeff (tune/replace)
+
+-
+  name: t_eva         #Extra absorption layer
+  unit: m             #Thickness of EVA encapsulant.
+  value: 0.0005       # EVA thickness (replace w real)
+
+-
+  name: alpha_eva   #How absorptive EVA is.
+  unit: 1/m           #Light lost inside EVA layer.
+  value: 20           # absorption coeff (tune/replace)
+
+-
+  name: tau_misc
+  unit: dimensionless
+  value: 0.98          # dirt/haze/gaps (tune)
+
+-
+  name: ar_gain         #Anti-reflective coating gain
+  unit: dimensionless
+  value: 0.0           # set 0 unless KNOW we have AR
+
+-
+  name: array_area
+  unit: m^2
+  value: 3.0   # replace with real module area
+
+-
+  name: ambient_temp
+  unit: degC
+  value: 25
+-
+  name: temp_coeff
+  unit: 1/degC
+  value: 0.0035
+
+-
+  name: t_ref
+  unit: degC
+  value: 25
+-
+  name: noct #How hot the solar cells typically get in real outdoor conditions
+  unit: degC #standard test conditions (could be checked w specific module datasheet)
+  value: 45
+-
+  name: irradiance_clears
+  unit: W/m^2
+  value: 1000
+
+- 
+  name: mppt_efficiency
+  unit: dimensionless
+  value: 0.98
+
+#battery
 
 #battery
 #esr_loss_model
