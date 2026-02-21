@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import yaml
 import argparse
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
@@ -23,6 +24,7 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
+matplotlib.use("Agg") 
 
 class YAMLParam(TypedDict):
     name: str
