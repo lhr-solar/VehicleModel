@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import yaml
 import argparse
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
@@ -23,6 +24,8 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
+matplotlib.use("Agg")
+
 
 class YAMLParam(TypedDict):
     name: str
@@ -67,6 +70,8 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
     # Logging for every timestep
     for i in range(total_steps):
+        current_time += timedelta(seconds=timestep_seconds)
+
         # seconds since midnight
         sec_since_midnight = (
             current_time.hour * 3600 + current_time.minute * 60 + current_time.second
@@ -92,8 +97,6 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
                 row[name] = value
 
         rows.append(row)
-
-        current_time += timedelta(seconds=timestep_seconds)
 
     return pd.DataFrame(rows)
 
@@ -146,6 +149,9 @@ def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str
 
     ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
 
+    if param == "total_energy":
+        ax.set_ylim(0, 5240)
+
     plt.tight_layout()
 
     # Save the figure
@@ -186,7 +192,7 @@ def generate_graphs(
 
 
 def grid_search(
-    search_params: dict[str, tuple[float, float, float, str]],
+    search_params: dict[str, tuple[int, int, int, str]],
     output_dir: str,
     csv_name: str,
     m: VehicleModel,
@@ -201,12 +207,14 @@ def grid_search(
     search_configs = [dict(zip(keys, values)) for values in product(*ranges)]
 
     for config in search_configs:
-        config_output_dir = os.path.join(output_dir, "grid_search")
+        config_output_dir = ""
 
         for k, v in config.items():
             m.params[k] = v
-            subdir = f"{os.path.basename(k)}_{v:~#P}".replace(" ", "_")
-            config_output_dir = os.path.join(config_output_dir, subdir)
+            config_output_dir += f"{k}_{v:~#P}_"
+
+        config_output_dir = config_output_dir[:-1].replace(" ", "_")
+        config_output_dir = output_dir + "/" + config_output_dir
 
         os.makedirs(config_output_dir, exist_ok=True)
 
@@ -217,14 +225,12 @@ def grid_search(
 
         # Save to CSV
         df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(config_output_dir) / Path(csv_name).name
+        csv_path = Path(config_output_dir) / Path(csv_name)
         df_to_save.to_csv(csv_path, index=False)
         print(f"Simulation complete. Results saved to {csv_path}")
 
         # Generate graphs
         generate_graphs(df, graph_params, units_map, config_output_dir)
-
-        m.reset()
 
 
 def main():
@@ -275,17 +281,12 @@ def main():
     # Combine log and graph parameters to ensure all needed data is captured
     capture_params = list(set(args.log + graph_params))
 
-    if args.grid_search is not None:
+    if args.grid_search != None:
         search_params = {}
 
         for item in args.grid_search:
-            try:
-                name, start, stop, step, unit = item.split(":")
-                search_params[name] = (float(start), float(stop), float(step), unit)
-            except ValueError:
-                print(
-                    f"Warning: Skipping invalid grid search parameter '{item}'. Expected format 'name:start:stop:step:unit'."
-                )
+            name, start, stop, step, unit = item.split(":")
+            search_params[name] = (float(start), float(stop), float(step), unit)
 
         grid_search(
             search_params,
@@ -307,7 +308,7 @@ def main():
 
         # Save to CSV
         df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(args.output_dir) / Path(args.csv).name
+        csv_path = Path(args.output_dir) / Path(args.csv)
         df_to_save.to_csv(csv_path, index=False)
         print(f"Simulation complete. Results saved to {csv_path}")
 
