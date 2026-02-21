@@ -6,6 +6,7 @@ from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
+from models.motor_losses import MotorLossModel
 from units import UNIT_REGISTRY, Q_
 
 from typing import TypedDict, cast
@@ -22,7 +23,6 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
-
 
 class YAMLParam(TypedDict):
     name: str
@@ -264,11 +264,12 @@ def main():
     args = parser.parse_args()
 
     # Initialize vehicle model
+
     m = VehicleModel(parse_yaml("params.yaml"))
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
-
+    m.add_model(MotorLossModel())
     m.set_battery_model(BatteryModel())
 
     # Determine which parameters to graph (default: all logged parameters)
