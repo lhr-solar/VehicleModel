@@ -2,7 +2,7 @@ import threading
 import traceback
 import tkinter as tk
 from tkinter import ttk, scrolledtext
-import ttkbootstrap as tb
+import ttkbootstrap as tb  # type: ignore
 
 import matplotlib.dates as mdates
 import pandas as pd
