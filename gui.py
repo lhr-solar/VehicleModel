@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext
+import ttkbootstrap as tb
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -397,7 +398,7 @@ class SimulationGUI:
 
 
 def main():
-    root = tk.Tk()
+    root = tb.Window(themename="darkly")
     app = SimulationGUI(root)
     root.mainloop()
 
