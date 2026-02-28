@@ -66,7 +66,6 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
 
     # Initialize weather model if enabled
-    weather_model = None
     if m.params.get("use_weather_data", Q_(0, "dimensionless")).magnitude > 0:
         try:
             weather_model = WeatherModel()
@@ -82,12 +81,12 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
             weather_model.fetch_weather_data(
                 latitude, longitude, current_time, end_time
             )
+            m.set_weather_model(weather_model)
             print("Weather data loaded successfully")
         except Exception as e:
             print(
                 f"Warning: Failed to load weather data: {str(e)}. Continuing without weather effects."
             )
-            weather_model = None
 
     rows: list[dict] = []
 
@@ -100,54 +99,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
         # inject timestamp into model params
         m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
-
-        # Apply weather modifiers if available
-        if weather_model is not None:
-            weather = weather_model.get_weather_at_time(current_time)
-
-            # Temperature modifier (affects battery capacity)
-            temp_mod = weather_model.get_temperature_modifier(weather["temperature"])
-            m.params["weather_temp_modifier"] = Q_(temp_mod, "dimensionless")
-
-            # Cloud cover modifier (affects array)
-            if (
-                m.params.get(
-                    "weather_cloud_modifier_enabled", Q_(1, "dimensionless")
-                ).magnitude
-                > 0
-            ):
-                cloud_mod = weather_model.get_cloud_cover_modifier(
-                    weather["cloud_cover"]
-                )
-                m.params["weather_cloud_modifier"] = Q_(cloud_mod, "dimensionless")
-
-            # Wind modifier (affects drag)
-            if (
-                m.params.get(
-                    "weather_wind_modifier_enabled", Q_(1, "dimensionless")
-                ).magnitude
-                > 0
-            ):
-                heading = m.params.get("vehicle_heading", Q_(0, "degree")).magnitude
-                vehicle_speed = m.params["velocity"].to("m/s").magnitude
-                wind_mod = weather_model.get_wind_modifier(
-                    weather["wind_speed"], weather["wind_direction"], heading, vehicle_speed
-                )
-                m.params["weather_wind_modifier"] = Q_(wind_mod, "dimensionless")
-
-            # Road condition modifier (affects rolling resistance)
-            road_mod = weather_model.get_rolling_resistance_modifier(
-                weather["precipitation"]
-            )
-            m.params["weather_road_modifier"] = Q_(road_mod, "dimensionless")
-
-            # Store weather data for logging
-            m.params["weather_temperature"] = Q_(weather["temperature"], "celsius")
-            m.params["weather_cloud_cover"] = Q_(
-                weather["cloud_cover"], "dimensionless"
-            )
-            m.params["weather_wind_speed"] = Q_(weather["wind_speed"], "m/s")
-            m.params["weather_wind_direction"] = Q_(weather["wind_direction"], "degree")
+        m.params["current_time_ts"] = Q_(current_time.timestamp(), "seconds")
 
         m.update()
 
@@ -172,7 +124,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     
     # Create weather graph if weather data was used
-    if weather_model is not None and weather_model.weather_data is not None:
+    if m.weather_model is not None:
         create_weather_graph(df, "output")
     
     return df

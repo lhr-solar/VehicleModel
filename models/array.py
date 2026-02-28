@@ -59,9 +59,9 @@ class SCPArrayModel(EnergyModel):
         # base max power
         base_power = params["num_cells"] * params["p_mpp"] * params["cell_efficiency"]
 
-        # Get cloud cover modifier if weather is enabled
-        cloud_modifier = params.get("weather_cloud_modifier", None)
-        if cloud_modifier is not None:
+        cloud_cover = params.get("weather_cloud_cover")
+        if cloud_cover is not None:
+            cloud_modifier = 1.0 - (cloud_cover.magnitude / 100.0) * 0.8
             base_power = base_power * cloud_modifier
 
         params["array_power"] = base_power * factor
