@@ -1,7 +1,18 @@
 # VehicleModel
-## Installation
+## Setup
+We use `uv` as our package manager, so whatever OS you are running, install `uv` [as according to the documentation](https://docs.astral.sh/uv/getting-started/installation/). Then, in the repo directory, run `uv sync` to sync the dependencies in the virtual environment.
 
-1. Install [WSL.](https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-vscode)
-2. Install [uv.](https://docs.astral.sh/uv/getting-started/installation/)
-3. [Clone the repository](https://git-scm.com/book/en/v2/Git-Basics-Getting-a-Git-Repository).
-4. Run `uv sync`.
+## Usage
+```
+./run-model
+options:
+  -h, --help            show this help message and exit
+  --log LOG [LOG ...]   List of parameter names to log each timestep
+                        (default: velocity, total_energy, array_power)
+  --csv CSV             Output CSV filename (default: log.csv)
+  --graph [GRAPH ...]   List of parameter names to graph over time (default:
+                        graphs all logged parameters)
+  --graph-output GRAPH_OUTPUT
+                        Output directory for graphs (default: output/)
+```
+
