@@ -16,6 +16,7 @@ class BasicArrayModel(EnergyModel):
     NOTE: p_mpp is assumed to already be electrical max power per cell (W/cell),
     so we do NOT multiply by cell_efficiency here.
     """
+
     @override
     def update(self, params, timestep):
         # Normalize timestep to seconds quantity
@@ -41,6 +42,7 @@ class IrradianceArrayModel(EnergyModel):
     If params["irradiance"] exists, uses it.
     Otherwise falls back to irradiance_clear/irradiance_clears (YAML typo-safe).
     """
+
     @override
     def update(self, params, timestep):
         if isinstance(timestep, timedelta):
@@ -98,13 +100,17 @@ class SCPArrayModelLamination(EnergyModel):
         # Placeholder declination (equinox). Good enough for “simple + causal”.
         dec = 0.0
 
-        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(dec) * math.cos(h)
+        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(
+            dec
+        ) * math.cos(h)
         sin_alpha = max(-1.0, min(1.0, float(sin_alpha)))
 
         return 0.0 if sin_alpha <= 0 else float(sin_alpha)
 
     # LAMINATION OPTICS
-    def _tau_theta(self, theta: float, params: dict[str, PlainQuantity[float]]) -> float:
+    def _tau_theta(
+        self, theta: float, params: dict[str, PlainQuantity[float]]
+    ) -> float:
         n0 = 1.0
         n1 = float(params["n_cover"].magnitude)
 
@@ -123,7 +129,7 @@ class SCPArrayModelLamination(EnergyModel):
 
         # Optional AR boost reduces reflectance
         ar_gain = float(params["ar_gain"].magnitude) if "ar_gain" in params else 0.0
-        R *= (1.0 - ar_gain)
+        R *= 1.0 - ar_gain
         T_interface = max(0.0, 1.0 - R)
 
         # Beer–Lambert absorption (path length increases by 1/cos(theta1))
@@ -133,7 +139,9 @@ class SCPArrayModelLamination(EnergyModel):
         a_eva = float(params["alpha_eva"].to("1/meter").magnitude)
 
         path_scale = 1.0 / max(1e-6, float(c1))
-        T_abs = math.exp(-a_cover * t_cover * path_scale) * math.exp(-a_eva * t_eva * path_scale)
+        T_abs = math.exp(-a_cover * t_cover * path_scale) * math.exp(
+            -a_eva * t_eva * path_scale
+        )
 
         tau_misc = float(params["tau_misc"].magnitude) if "tau_misc" in params else 1.0
         tau = T_interface * T_abs * tau_misc
@@ -231,7 +239,9 @@ class SCPArrayModelLamination(EnergyModel):
         params["tau"] = tau_q
         params["theta_rad"] = cast(PlainQuantity[float], Q_(theta, "rad"))
         params["irradiance"] = cast(PlainQuantity[float], G)  # store what we used
-        params["irradiance_source"] = Q_(1.0, "")  # placeholder to keep type consistent if needed
+        params["irradiance_source"] = Q_(
+            1.0, ""
+        )  # placeholder to keep type consistent if needed
         params["cell_temp"] = cast(PlainQuantity[float], T_cell)
         params["thermal_factor"] = f_T_q
         params["incidence_factor"] = cast(PlainQuantity[float], Q_(inc, ""))

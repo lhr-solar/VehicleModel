@@ -5,7 +5,7 @@ from models.vehicle_model import VehicleModel
 from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
-from models.array import SCPArrayModel
+from models.array import BasicArrayModel
 from models.motor_losses import MotorLossModel
 from units import UNIT_REGISTRY, Q_
 
@@ -23,6 +23,7 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
+
 
 class YAMLParam(TypedDict):
     name: str
