@@ -1,6 +1,5 @@
 #!/bin/bash
-
-set -e
+set -euo pipefail
 
 uv run ruff format
 uv run pyright
