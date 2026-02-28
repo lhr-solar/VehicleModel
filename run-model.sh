@@ -4,8 +4,9 @@ set -e
 
 uv run ruff format
 uv run pyright
-if [ "$CI" = "true" ]; then
-	uv run main.py "$@"
-else
+if [[ "$1" == "--gui" ]]; then
+	shift
 	uv run gui.py "$@"
+else
+	uv run main.py "$@"
 fi

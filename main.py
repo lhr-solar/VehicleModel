@@ -11,8 +11,10 @@ from units import UNIT_REGISTRY, Q_
 
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
+import threading
 import yaml
 import argparse
+import json
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
@@ -24,7 +26,6 @@ from itertools import product
 
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
-matplotlib.use("Agg")
 
 
 class YAMLParam(TypedDict):
@@ -53,7 +54,21 @@ def parse_yaml(yaml_path: str) -> dict[str, PlainQuantity[float]]:
     return result
 
 
-def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
+def build_model(params: dict[str, PlainQuantity[float]]) -> VehicleModel:
+    m = VehicleModel(params)
+    m.add_model(SCPRollingResistanceModel())
+    m.add_model(SCPDragModel())
+    m.add_model(SCPArrayModel())
+    m.add_model(MotorLossModel())
+    m.set_battery_model(BatteryModel())
+    return m
+
+
+def run_simulation(
+    m: VehicleModel,
+    log_params: list[str],
+    stop_event: threading.Event | None = None,
+) -> pd.DataFrame:
     # Total number of timesteps
     total_steps = int(
         (m.params["raceday_len"] / m.params["timestep"]).to("dimensionless").magnitude
@@ -70,6 +85,8 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
     # Logging for every timestep
     for i in range(total_steps):
+        if stop_event is not None and stop_event.is_set():
+            break
         current_time += timedelta(seconds=timestep_seconds)
 
         # seconds since midnight
@@ -234,6 +251,8 @@ def grid_search(
 
 
 def main():
+    matplotlib.use("Agg")
+
     # Command-line arguments
     parser = argparse.ArgumentParser(
         description="Run vehicle model and log parameters."
@@ -264,16 +283,15 @@ def main():
         help="List of parameter ranges, steps, and units to iterate over. Example: velocity:10:50:1:mph",
         default=None,
     )
+    parser.add_argument(
+        "--params",
+        default="params.yaml",
+        help="Path to YAML parameter file (default: params.yaml)",
+    )
     args = parser.parse_args()
 
     # Initialize vehicle model
-
-    m = VehicleModel(parse_yaml("params.yaml"))
-    m.add_model(SCPRollingResistanceModel())
-    m.add_model(SCPDragModel())
-    m.add_model(SCPArrayModel())
-    m.add_model(MotorLossModel())
-    m.set_battery_model(BatteryModel())
+    m = build_model(parse_yaml(args.params))
 
     # Determine which parameters to graph (default: all logged parameters)
     graph_params = args.graph or args.log
@@ -311,6 +329,11 @@ def main():
         csv_path = Path(args.output_dir) / Path(args.csv)
         df_to_save.to_csv(csv_path, index=False)
         print(f"Simulation complete. Results saved to {csv_path}")
+
+        # Save units for callers that need them without running models
+        units_path = Path(args.output_dir) / "units.json"
+        with open(units_path, "w") as f:
+            json.dump(units_map, f)
 
         # Generate graphs
         generate_graphs(df, graph_params, units_map, args.output_dir)

@@ -1,20 +1,18 @@
+import threading
+import traceback
 import tkinter as tk
 from tkinter import ttk, scrolledtext
 import ttkbootstrap as tb
-import matplotlib.pyplot as plt
+
+import matplotlib.dates as mdates
+import pandas as pd
+import yaml
+from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import pandas as pd
-import matplotlib.dates as mdates
-from datetime import datetime
-import threading
-from main import VehicleModel, parse_yaml, run_simulation, get_param_units
-from models.rr import SCPRollingResistanceModel
-from models.drag import SCPDragModel
-from models.array import SCPArrayModel
-from models.battery import BatteryModel
+
+from main import parse_yaml, build_model, run_simulation, get_param_units
 from units import Q_
-from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 
 
 class SimulationGUI:
@@ -27,6 +25,12 @@ class SimulationGUI:
         self.df = None
         self.units_map = {}
         self.is_running = False
+        self._stop_event = threading.Event()
+
+        # Load params from yaml for GUI defaults
+        with open("params.yaml", "r") as f:
+            raw = yaml.safe_load(f)
+        self.yaml_params = {p["name"]: p for p in raw}
 
         # Create main containers
         self._create_ui()
@@ -74,20 +78,25 @@ class SimulationGUI:
         # Dictionary to store parameter entries
         self.param_entries = {}
 
-        # Define editable parameters with defaults
+        # Editable parameters pulled from params.yaml
+        param_names = [
+            "velocity",
+            "timestep",
+            "raceday_len",
+            "total_energy",
+            "weight",
+            "drag_coeff",
+            "frontal_area",
+            "air_density",
+            "mu_rr",
+            "num_cells",
+            "p_mpp",
+            "cell_efficiency",
+        ]
         sim_params = [
-            ("velocity", "20", "mph"),
-            ("timestep", "30", "minutes"),
-            ("raceday_len", "8", "hours"),
-            ("total_energy", "5240", "Wh"),
-            ("weight", "328", "kg"),
-            ("drag_coeff", "0.141589419", "dimensionless"),
-            ("frontal_area", "1.268", "m^2"),
-            ("air_density", "1.225", "kg/m^3"),
-            ("mu_rr", "0.00175", "dimensionless"),
-            ("num_cells", "258", "dimensionless"),
-            ("p_mpp", "3.98", "W"),
-            ("cell_efficiency", "0.254", "dimensionless"),
+            (name, str(self.yaml_params[name]["value"]), self.yaml_params[name]["unit"])
+            for name in param_names
+            if name in self.yaml_params
         ]
 
         for param_name, default_val, unit in sim_params:
@@ -169,11 +178,18 @@ class SimulationGUI:
         info_label.grid(row=row, column=0, columnspan=2, pady=(10, 5))
         row += 1
 
-        # Run button
+        # Run / Stop buttons
         self.run_button = ttk.Button(
             control_frame, text="Run Simulation", command=self._run_simulation
         )
-        self.run_button.grid(row=row, column=0, columnspan=2, pady=20)
+        self.run_button.grid(row=row, column=0, sticky=tk.EW, padx=(0, 5), pady=20)
+        self.stop_button = ttk.Button(
+            control_frame,
+            text="Stop",
+            command=self._stop_simulation,
+            state="disabled",
+        )
+        self.stop_button.grid(row=row, column=1, sticky=tk.EW, padx=(5, 0), pady=20)
         row += 1
 
         # Progress indicator
@@ -219,7 +235,9 @@ class SimulationGUI:
         for tab in self.notebook.tabs():
             self.notebook.forget(tab)
 
+        self._stop_event.clear()
         self.run_button.config(state="disabled")
+        self.stop_button.config(state="normal")
         self.progress_label.config(text="Status: Running...", foreground="orange")
         self.console.delete(1.0, tk.END)
 
@@ -228,15 +246,19 @@ class SimulationGUI:
         thread.daemon = True
         thread.start()
 
+    def _stop_simulation(self):
+        if self.is_running:
+            self._stop_event.set()
+            self.stop_button.config(state="disabled")
+            self.progress_label.config(text="Status: Stopping...", foreground="orange")
+
     def _simulation_worker(self):
         try:
             self.is_running = True
-            self._log("Initializing vehicle model...")
+            self._log("Preparing simulation...")
 
-            # Initialize vehicle model with base params
+            # Load params and apply GUI overrides
             params = parse_yaml("params.yaml")
-
-            # Override with GUI values
             self._log("Applying custom parameters from GUI...")
             for param_name, (entry, unit) in self.param_entries.items():
                 try:
@@ -246,33 +268,28 @@ class SimulationGUI:
                 except ValueError:
                     self._log(f"Warning: Invalid value for {param_name}, using default")
 
-            m = VehicleModel(params)
-            m.add_model(SCPRollingResistanceModel())
-            m.add_model(SCPDragModel())
-            m.add_model(SCPArrayModel())
-            m.set_battery_model(BatteryModel())
-
-            # Get log parameters from checkboxes
-            log_params = [
-                param for param, var in self.log_param_vars.items() if var.get()
-            ]
-
-            # Add custom parameters
+            # Collect log params
+            log_params = [p for p, var in self.log_param_vars.items() if var.get()]
             custom_params = self.custom_params_entry.get().strip()
             if custom_params:
-                custom_list = [p.strip() for p in custom_params.split(",") if p.strip()]
-                log_params.extend(custom_list)
-
+                log_params.extend(
+                    p.strip() for p in custom_params.split(",") if p.strip()
+                )
             if not log_params:
                 self._log("Warning: No parameters selected. Using defaults.")
                 log_params = ["velocity", "total_energy", "array_power"]
 
             self._log(f"Running simulation with parameters: {', '.join(log_params)}")
 
-            # Run simulation
-            self.df = run_simulation(m, log_params)
+            m = build_model(params)
+            self.df = run_simulation(m, log_params, self._stop_event)
+
+            if self._stop_event.is_set():
+                self._log("Simulation stopped by user.")
+                self.progress_label.config(text="Status: Stopped", foreground="gray")
+                return
+
             self.units_map = get_param_units(m, log_params)
-            self.params = params  # Store for dynamic graph limits
 
             self._log(f"Simulation complete! Processed {len(self.df)} timesteps")
 
@@ -317,8 +334,6 @@ class SimulationGUI:
                 )
 
         except Exception as e:
-            import traceback
-
             self._log(f"ERROR: {str(e)}")
             self._log(traceback.format_exc())
             self.progress_label.config(text="Status: Error", foreground="red")
@@ -326,6 +341,7 @@ class SimulationGUI:
         finally:
             self.is_running = False
             self.run_button.config(state="normal")
+            self.stop_button.config(state="disabled")
 
     def _create_graphs(self, params):
         if self.df is None or self.df.empty:
@@ -377,13 +393,11 @@ class SimulationGUI:
             ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
 
             # Set dynamic y-axis limit for total_energy based on user input
-            if (
-                param == "total_energy"
-                and hasattr(self, "params")
-                and "total_energy" in self.params
-            ):
-                max_energy = self.params["total_energy"].to("Wh").magnitude
-                ax.set_ylim(0, max_energy)
+            if param == "total_energy" and "total_energy" in self.param_entries:
+                try:
+                    ax.set_ylim(0, float(self.param_entries["total_energy"][0].get()))
+                except ValueError:
+                    pass
 
             fig.tight_layout()
 
