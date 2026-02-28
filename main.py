@@ -24,6 +24,7 @@ from itertools import product
 # Default parameters to log if none specified
 DEFAULT_LOG_PARAMS = ("velocity", "total_energy", "array_power")
 
+
 class YAMLParam(TypedDict):
     name: str
     value: float

@@ -64,7 +64,7 @@
 -
   name: timestep
   unit: minutes
-  value: 30 
+  value: 1
 -
   name: raceday_len
   unit: hours
@@ -223,19 +223,6 @@
 # k_E: Eddy current loss coefficient (induced circulating currents in core)
 # k_B1, k_B2: Bearing friction coefficients (mechanical friction)
 # k_D: Air drag coefficient (windage from rotor spinning)
-# k_SW: Commutation switching loss coefficient (brushless motor switching)
--
-  name: motor_eta_C_default
-  unit: dimensionless
-  value: 0.97  # Controller efficiency
--
-  name: motor_T_ref_default
-  unit: °C
-  value: 25.0  # Reference temperature for resistance measurements
--
-  name: motor_T_operating_default
-  unit: °C
-  value: 70.0  # Operating temperature
 -
   name: motor_k_H_default
   unit: W/rpm
@@ -256,32 +243,8 @@
   name: motor_k_D_default
   unit: W/rpm^3
   value: 0.0  # Air drag loss
--
-  name: motor_k_SW_default
-  unit: W/rpm
-  value: 0.0  # Commutation switching loss
--
-  name: motor_k_1_default
-  unit: W/rpm
-  value: 0.0
--
-  name: motor_k_2_default
-  unit: W/rpm^2
-  value: 0.0
--
-  name: motor_k_3_default
-  unit: W/rpm^3
-  value: 0.0
 
 # Motor parameters - general configuration for the vehicle's motor
--
-  name: motor_k_T
-  unit: N·m/A
-  value: 0.1910  # Torque constant
--
-  name: motor_k_C
-  unit: V·min/rad
-  value: 0.020  # Back-EMF constant
 -
   name: motor_k_S
   unit: N·m/A
