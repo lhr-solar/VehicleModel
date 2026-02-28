@@ -296,6 +296,38 @@ def run_full_sim(
     return df, units_map
 
 
+def gui_grid_search(
+    log_params: list[str],
+    param_overrides: dict,
+    search_params: dict[str, tuple[float, float, float, str]],
+    stop_event: threading.Event | None = None,
+) -> list[tuple[str, pd.DataFrame, dict[str, str]]]:
+    base_params = parse_yaml("params.yaml")
+    if param_overrides:
+        base_params.update(param_overrides)
+
+    keys = list(search_params.keys())
+    ranges = [
+        [Q_(v, unit) for v in np.arange(start, stop, step)]
+        for (start, stop, step, unit) in search_params.values()
+    ]
+    configs = [dict(zip(keys, values)) for values in product(*ranges)]
+
+    results = []
+    for config in configs:
+        if stop_event and stop_event.is_set():
+            break
+        config_params = base_params.copy()
+        config_params.update(config)
+        m = build_model(config_params)
+        label = ", ".join(f"{k}={v:~#P}" for k, v in config.items())
+        df = run_simulation(m, log_params, stop_event)
+        units_map = get_param_units(m, log_params)
+        results.append((label, df, units_map))
+
+    return results
+
+
 def gui_run(
     log_params: list[str],
     param_overrides: dict,
