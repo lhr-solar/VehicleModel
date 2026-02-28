@@ -64,7 +64,7 @@
 -
   name: timestep
   unit: minutes
-  value: 1
+  value: 30
 -
   name: raceday_len
   unit: hours
