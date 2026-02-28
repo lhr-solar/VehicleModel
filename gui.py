@@ -11,7 +11,7 @@ from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from main import parse_yaml, build_model, run_simulation, get_param_units
+from main import gui_run
 from units import Q_
 
 
@@ -252,44 +252,42 @@ class SimulationGUI:
             self.stop_button.config(state="disabled")
             self.progress_label.config(text="Status: Stopping...", foreground="orange")
 
+    def _collect_log_params(self):
+        log_params = [p for p, var in self.log_param_vars.items() if var.get()]
+        custom_params = self.custom_params_entry.get().strip()
+        if custom_params:
+            log_params.extend(p.strip() for p in custom_params.split(",") if p.strip())
+        if not log_params:
+            self._log("Warning: No parameters selected. Using defaults.")
+            log_params = ["velocity", "total_energy", "array_power"]
+        return log_params
+
+    def _collect_param_overrides(self):
+        param_overrides = {}
+        for param_name, (entry, unit) in self.param_entries.items():
+            try:
+                param_overrides[param_name] = Q_(float(entry.get()), unit)
+            except ValueError:
+                self._log(f"Warning: Invalid value for {param_name}, using default")
+        return param_overrides
+
     def _simulation_worker(self):
         try:
             self.is_running = True
-            self._log("Preparing simulation...")
-
-            # Load params and apply GUI overrides
-            params = parse_yaml("params.yaml")
-            self._log("Applying custom parameters from GUI...")
-            for param_name, (entry, unit) in self.param_entries.items():
-                try:
-                    value = float(entry.get())
-                    params[param_name] = Q_(value, unit)
-                    self._log(f"  {param_name}: {value} {unit}")
-                except ValueError:
-                    self._log(f"Warning: Invalid value for {param_name}, using default")
-
-            # Collect log params
-            log_params = [p for p, var in self.log_param_vars.items() if var.get()]
-            custom_params = self.custom_params_entry.get().strip()
-            if custom_params:
-                log_params.extend(
-                    p.strip() for p in custom_params.split(",") if p.strip()
-                )
-            if not log_params:
-                self._log("Warning: No parameters selected. Using defaults.")
-                log_params = ["velocity", "total_energy", "array_power"]
-
+            log_params = self._collect_log_params()
+            param_overrides = self._collect_param_overrides()
             self._log(f"Running simulation with parameters: {', '.join(log_params)}")
 
-            m = build_model(params)
-            self.df = run_simulation(m, log_params, self._stop_event)
+            self.df, units_map = gui_run(log_params, param_overrides, self._stop_event)
+            self.units_map = units_map or {}
 
             if self._stop_event.is_set():
                 self._log("Simulation stopped by user.")
                 self.progress_label.config(text="Status: Stopped", foreground="gray")
                 return
 
-            self.units_map = get_param_units(m, log_params)
+            if self.df is None or self.units_map is None:
+                return
 
             self._log(f"Simulation complete! Processed {len(self.df)} timesteps")
 

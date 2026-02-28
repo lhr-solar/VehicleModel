@@ -250,10 +250,72 @@ def grid_search(
         generate_graphs(df, graph_params, units_map, config_output_dir)
 
 
+def run_full_sim(
+    args, stop_event: threading.Event | None = None
+) -> tuple[pd.DataFrame | None, dict[str, str] | None]:
+    params = parse_yaml(args.params)
+
+    if hasattr(args, "param_overrides") and args.param_overrides:
+        params.update(args.param_overrides)
+
+    m = build_model(params)
+
+    log_params = list(args.log)
+    graph_params = list(args.graph) if args.graph is not None else log_params
+    capture_params = list(set(log_params + graph_params))
+
+    if args.grid_search is not None:
+        search_params = {}
+        for item in args.grid_search:
+            name, start, stop, step, unit = item.split(":")
+            search_params[name] = (float(start), float(stop), float(step), unit)
+        grid_search(
+            search_params, args.output_dir, args.csv, m, graph_params, capture_params
+        )
+        return None, None
+
+    df = run_simulation(m, capture_params, stop_event)
+    units_map = get_param_units(m, capture_params)
+
+    if stop_event is None or not stop_event.is_set():
+        os.makedirs(args.output_dir, exist_ok=True)
+
+        df_to_save = df.drop(columns=["datetime"])
+        csv_path = Path(args.output_dir) / Path(args.csv)
+        df_to_save.to_csv(csv_path, index=False)
+        print(f"Simulation complete. Results saved to {csv_path}")
+
+        units_path = Path(args.output_dir) / "units.json"
+        with open(units_path, "w") as f:
+            json.dump(units_map, f)
+
+        # Only generate file graphs in CLI mode to avoid matplotlib backend conflicts
+        if stop_event is None:
+            generate_graphs(df, graph_params, units_map, args.output_dir)
+
+    return df, units_map
+
+
+def gui_run(
+    log_params: list[str],
+    param_overrides: dict,
+    stop_event: threading.Event | None = None,
+) -> tuple[pd.DataFrame | None, dict[str, str] | None]:
+    args = argparse.Namespace(
+        params="params.yaml",
+        log=log_params,
+        graph=None,
+        csv="log.csv",
+        output_dir="output",
+        grid_search=None,
+        param_overrides=param_overrides,
+    )
+    return run_full_sim(args, stop_event=stop_event)
+
+
 def main():
     matplotlib.use("Agg")
 
-    # Command-line arguments
     parser = argparse.ArgumentParser(
         description="Run vehicle model and log parameters."
     )
@@ -261,7 +323,7 @@ def main():
         "--log",
         nargs="+",
         help=f"List of parameter names to log each timestep (default: {', '.join(DEFAULT_LOG_PARAMS)})",
-        default=DEFAULT_LOG_PARAMS,
+        default=list(DEFAULT_LOG_PARAMS),
     )
     parser.add_argument(
         "--csv", default="log.csv", help="Output CSV filename (default: log.csv)"
@@ -289,54 +351,7 @@ def main():
         help="Path to YAML parameter file (default: params.yaml)",
     )
     args = parser.parse_args()
-
-    # Initialize vehicle model
-    m = build_model(parse_yaml(args.params))
-
-    # Determine which parameters to graph (default: all logged parameters)
-    graph_params = args.graph or args.log
-
-    # Combine log and graph parameters to ensure all needed data is captured
-    capture_params = list(set(args.log + graph_params))
-
-    if args.grid_search != None:
-        search_params = {}
-
-        for item in args.grid_search:
-            name, start, stop, step, unit = item.split(":")
-            search_params[name] = (float(start), float(stop), float(step), unit)
-
-        grid_search(
-            search_params,
-            args.output_dir,
-            args.csv,
-            m,
-            graph_params,
-            capture_params,
-        )
-    else:
-        # Run simulation and get results
-        df = run_simulation(m, capture_params)
-
-        # Get units for all parameters after running simulation
-        units_map = get_param_units(m, capture_params)
-
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-
-        # Save to CSV
-        df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(args.output_dir) / Path(args.csv)
-        df_to_save.to_csv(csv_path, index=False)
-        print(f"Simulation complete. Results saved to {csv_path}")
-
-        # Save units for callers that need them without running models
-        units_path = Path(args.output_dir) / "units.json"
-        with open(units_path, "w") as f:
-            json.dump(units_map, f)
-
-        # Generate graphs
-        generate_graphs(df, graph_params, units_map, args.output_dir)
+    run_full_sim(args)
 
 
 if __name__ == "__main__":
