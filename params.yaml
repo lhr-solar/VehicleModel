@@ -275,7 +275,10 @@
   name: impp
   unit: A
   value: 6.114
-
+-
+  name: wheel_diameter
+  unit: m
+  value: 0.5
 #battery
 #esr_loss_model
 -
