@@ -6,10 +6,8 @@ from .energy_model import EnergyModel
 from units import Q_
 import copy
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from .weather_model import WeatherModel
+from typing import Optional
+from .weather_model import WeatherModel
 
 
 class VehicleModel:
@@ -18,7 +16,7 @@ class VehicleModel:
         self.models: list[EnergyModel] = []
         self.init_params = init_params
         self.params: dict[str, PlainQuantity[float]] = copy.deepcopy(init_params)
-        self.weather_model: Optional["WeatherModel"] = None
+        self.weather_model: Optional[WeatherModel] = None
 
     def reset(self):
         self.params = copy.deepcopy(self.init_params)
@@ -29,7 +27,7 @@ class VehicleModel:
     def set_battery_model(self, model: BatteryModel):
         self.battery_model = model
 
-    def set_weather_model(self, model: "WeatherModel"):
+    def set_weather_model(self, model: WeatherModel):
         self.weather_model = model
 
     def update(self):
