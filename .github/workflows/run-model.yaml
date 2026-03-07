@@ -19,5 +19,6 @@ jobs:
       - name: Make script executable
         run: chmod +x ./run-model.sh
 
-      - name: Run script
-        run: ./run-model.sh
+
+        - name: Run script
+          run: ./run-model.sh

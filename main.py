@@ -11,9 +11,12 @@ from units import UNIT_REGISTRY, Q_
 
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
+import threading
 import yaml
 import argparse
+import json
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
@@ -51,7 +54,21 @@ def parse_yaml(yaml_path: str) -> dict[str, PlainQuantity[float]]:
     return result
 
 
-def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
+def build_model(params: dict[str, PlainQuantity[float]]) -> VehicleModel:
+    m = VehicleModel(params)
+    m.add_model(SCPRollingResistanceModel())
+    m.add_model(SCPDragModel())
+    m.add_model(SCPArrayModel())
+    m.add_model(MotorLossModel())
+    m.set_battery_model(BatteryModel())
+    return m
+
+
+def run_simulation(
+    m: VehicleModel,
+    log_params: list[str],
+    stop_event: threading.Event | None = None,
+) -> pd.DataFrame:
     # Total number of timesteps
     total_steps = int(
         (m.params["raceday_len"] / m.params["timestep"]).to("dimensionless").magnitude
@@ -68,6 +85,10 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
 
     # Logging for every timestep
     for i in range(total_steps):
+        if stop_event is not None and stop_event.is_set():
+            break
+        current_time += timedelta(seconds=timestep_seconds)
+
         # seconds since midnight
         sec_since_midnight = (
             current_time.hour * 3600 + current_time.minute * 60 + current_time.second
@@ -93,8 +114,6 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
                 row[name] = value
 
         rows.append(row)
-
-        current_time += timedelta(seconds=timestep_seconds)
 
     return pd.DataFrame(rows)
 
@@ -147,6 +166,9 @@ def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str
 
     ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
 
+    if param == "total_energy":
+        ax.set_ylim(0, 5240)
+
     plt.tight_layout()
 
     # Save the figure
@@ -187,7 +209,7 @@ def generate_graphs(
 
 
 def grid_search(
-    search_params: dict[str, tuple[float, float, float, str]],
+    search_params: dict[str, tuple[int, int, int, str]],
     output_dir: str,
     csv_name: str,
     m: VehicleModel,
@@ -202,12 +224,14 @@ def grid_search(
     search_configs = [dict(zip(keys, values)) for values in product(*ranges)]
 
     for config in search_configs:
-        config_output_dir = os.path.join(output_dir, "grid_search")
+        config_output_dir = ""
 
         for k, v in config.items():
             m.params[k] = v
-            subdir = f"{os.path.basename(k)}_{v:~#P}".replace(" ", "_")
-            config_output_dir = os.path.join(config_output_dir, subdir)
+            config_output_dir += f"{k}_{v:~#P}_"
+
+        config_output_dir = config_output_dir[:-1].replace(" ", "_")
+        config_output_dir = output_dir + "/" + config_output_dir
 
         os.makedirs(config_output_dir, exist_ok=True)
 
@@ -218,18 +242,80 @@ def grid_search(
 
         # Save to CSV
         df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(config_output_dir) / Path(csv_name).name
+        csv_path = Path(config_output_dir) / Path(csv_name)
         df_to_save.to_csv(csv_path, index=False)
         print(f"Simulation complete. Results saved to {csv_path}")
 
         # Generate graphs
         generate_graphs(df, graph_params, units_map, config_output_dir)
 
-        m.reset()
+
+def run_full_sim(
+    args, stop_event: threading.Event | None = None
+) -> tuple[pd.DataFrame | None, dict[str, str] | None]:
+    params = parse_yaml(args.params)
+
+    if hasattr(args, "param_overrides") and args.param_overrides:
+        params.update(args.param_overrides)
+
+    m = build_model(params)
+
+    log_params = list(args.log)
+    graph_params = list(args.graph) if args.graph is not None else log_params
+    capture_params = list(set(log_params + graph_params))
+
+    if args.grid_search is not None:
+        search_params = {}
+        for item in args.grid_search:
+            name, start, stop, step, unit = item.split(":")
+            search_params[name] = (float(start), float(stop), float(step), unit)
+        grid_search(
+            search_params, args.output_dir, args.csv, m, graph_params, capture_params
+        )
+        return None, None
+
+    df = run_simulation(m, capture_params, stop_event)
+    units_map = get_param_units(m, capture_params)
+
+    if stop_event is None or not stop_event.is_set():
+        os.makedirs(args.output_dir, exist_ok=True)
+
+        df_to_save = df.drop(columns=["datetime"])
+        csv_path = Path(args.output_dir) / Path(args.csv)
+        df_to_save.to_csv(csv_path, index=False)
+        print(f"Simulation complete. Results saved to {csv_path}")
+
+        units_path = Path(args.output_dir) / "units.json"
+        with open(units_path, "w") as f:
+            json.dump(units_map, f)
+
+        # Only generate file graphs in CLI mode to avoid matplotlib backend conflicts
+        if stop_event is None:
+            generate_graphs(df, graph_params, units_map, args.output_dir)
+
+    return df, units_map
+
+
+def gui_run(
+    log_params: list[str],
+    param_overrides: dict,
+    stop_event: threading.Event | None = None,
+) -> tuple[pd.DataFrame | None, dict[str, str] | None]:
+    args = argparse.Namespace(
+        params="params.yaml",
+        log=log_params,
+        graph=None,
+        csv="log.csv",
+        output_dir="output",
+        grid_search=None,
+        param_overrides=param_overrides,
+    )
+    return run_full_sim(args, stop_event=stop_event)
 
 
 def main():
-    # Command-line arguments
+    matplotlib.use("Agg")
+
     parser = argparse.ArgumentParser(
         description="Run vehicle model and log parameters."
     )
@@ -237,7 +323,7 @@ def main():
         "--log",
         nargs="+",
         help=f"List of parameter names to log each timestep (default: {', '.join(DEFAULT_LOG_PARAMS)})",
-        default=DEFAULT_LOG_PARAMS,
+        default=list(DEFAULT_LOG_PARAMS),
     )
     parser.add_argument(
         "--csv", default="log.csv", help="Output CSV filename (default: log.csv)"
@@ -259,61 +345,13 @@ def main():
         help="List of parameter ranges, steps, and units to iterate over. Example: velocity:10:50:1:mph",
         default=None,
     )
+    parser.add_argument(
+        "--params",
+        default="params.yaml",
+        help="Path to YAML parameter file (default: params.yaml)",
+    )
     args = parser.parse_args()
-
-    # Initialize vehicle model
-
-    m = VehicleModel(parse_yaml("params.yaml"))
-    m.add_model(SCPRollingResistanceModel())
-    m.add_model(SCPDragModel())
-    m.add_model(SCPArrayModel())
-    m.add_model(MotorLossModel())
-    m.set_battery_model(BatteryModel())
-
-    # Determine which parameters to graph (default: all logged parameters)
-    graph_params = args.graph or args.log
-
-    # Combine log and graph parameters to ensure all needed data is captured
-    capture_params = list(set(args.log + graph_params))
-
-    if args.grid_search is not None:
-        search_params = {}
-
-        for item in args.grid_search:
-            try:
-                name, start, stop, step, unit = item.split(":")
-                search_params[name] = (float(start), float(stop), float(step), unit)
-            except ValueError:
-                print(
-                    f"Warning: Skipping invalid grid search parameter '{item}'. Expected format 'name:start:stop:step:unit'."
-                )
-
-        grid_search(
-            search_params,
-            args.output_dir,
-            args.csv,
-            m,
-            graph_params,
-            capture_params,
-        )
-    else:
-        # Run simulation and get results
-        df = run_simulation(m, capture_params)
-
-        # Get units for all parameters after running simulation
-        units_map = get_param_units(m, capture_params)
-
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-
-        # Save to CSV
-        df_to_save = df.drop(columns=["datetime"])
-        csv_path = Path(args.output_dir) / Path(args.csv).name
-        df_to_save.to_csv(csv_path, index=False)
-        print(f"Simulation complete. Results saved to {csv_path}")
-
-        # Generate graphs
-        generate_graphs(df, graph_params, units_map, args.output_dir)
+    run_full_sim(args)
 
 
 if __name__ == "__main__":
