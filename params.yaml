@@ -29,136 +29,252 @@
   name: r_wheel_weight
   unit: kg
   value: 92.92334
--
-  name: wheel_diameter
-  unit: m
-  value: 0.547624
 
-# array
+# array stuff
 -
   name: num_cells
   unit: dimensionless
-  value: 258 
+  value: 258
+
 -
   name: p_mpp
   unit: W
-  value: 3.98 
+  value: 3.98
+
 -
   name: cell_efficiency
   unit: dimensionless
   value: 0.254
--
-  name: latitude_deg
-  unit: degree
-  value: 30.2672      # Austin TX
--
-  name: longitude_deg
-  unit: degree
-  value: -97.7431     # Austin TX
-  
-- name: total_array_energy
-  value: 0
-  unit: joule
-
-# main
--
-  name: timestep
-  unit: minutes
-  value: 30 
--
-  name: raceday_len
-  unit: hours
-  value: 8
--
-  name: velocity
-  unit: mph
-  value: 20
--
-  name: total_energy
-  unit: Wh
-  value: 5240 
--
-  name: weight
-  unit: kg
-  value: 328
--
-  name: grav_accel
-  unit: m/s^2
-  value: 9.81
--
-  name: start_ts
-  unit: datetime
-  value: 2026-07-01 09:00:00
-  
-# lamination optics
--
-  name: n_cover
-  unit: dimensionless # How much light reflects when it hits the surface
-  value: 1.5          # glass ~1.5, ETFE ~1.4
-
--
-  name: t_cover
-  unit: m             # How much light gets absorbed passing through
-  value: 0.001        # cover thickness (replace w real)
-
--
-  name: alpha_cover   #How much light is lost inside the cover
-  unit: 1/m           #How absorptive the cover material is
-  value: 5            # absorption coeff (tune/replace)
-
--
-  name: t_eva         #Extra absorption layer
-  unit: m             #Thickness of EVA encapsulant.
-  value: 0.0005       # EVA thickness (replace w real)
-
--
-  name: alpha_eva   #How absorptive EVA is.
-  unit: 1/m           #Light lost inside EVA layer.
-  value: 20           # absorption coeff (tune/replace)
-
--
-  name: tau_misc
-  unit: dimensionless
-  value: 0.98          # dirt/haze/gaps (tune)
-
--
-  name: ar_gain         #Anti-reflective coating gain
-  unit: dimensionless
-  value: 0.0           # set 0 unless KNOW we have AR
 
 -
   name: array_area
   unit: m^2
-  value: 3.0   # replace with real module area
+  value: 3.0   # replace w the real array area when we have it
+
+-
+  name: total_array_energy
+  unit: joule
+  value: 0
+
+
+# main sim stuff
+
+-
+  name: timestep
+  unit: minutes
+  value: 30
+
+-
+  name: raceday_len
+  unit: hours
+  value: 8
+
+-
+  name: velocity
+  unit: mph
+  value: 20
+
+-
+  name: total_energy
+  unit: Wh
+  value: 5240
+
+-
+  name: weight
+  unit: kg
+  value: 328
+
+-
+  name: grav_accel
+  unit: m/s^2
+  value: 9.81
+
+-
+  name: start_ts
+  unit: datetime
+  value: 2026-07-01 09:00:00
+
+-
+  name: timestamp
+  unit: second
+  value: 32400   # seconds since midnight; 32400 = 9:00 AM
+
+
+# location / sun geometry
+
+-
+  name: latitude_deg
+  unit: degree
+  value: 30.2672      # Austin TX
+
+-
+  name: longitude_deg
+  unit: degree
+  value: -97.7431     # Austin TX
+  # not used in this simple incidence version yet, but keeping it is fine
+
+
+# irradiance / electrical
+
+-
+  name: irradiance_clears
+  unit: W/m^2
+  value: 1000
+  # this is the clear-sky irradiance value we are using
+  # and yes this is the ONLY fallback param name now
+
+-
+  name: mppt_efficiency
+  unit: dimensionless
+  value: 0.98
+
+
+# lamination optics
+
+-
+  name: n_cover
+  unit: dimensionless
+  value: 1.5
+  # refractive index of the top cover
+  # glass ~1.5, ETFE ~1.4-ish
+
+-
+  name: t_cover
+  unit: m
+  value: 0.001
+  # cover thickness
+  # replace with actual value later if we get better data
+
+-
+  name: alpha_cover
+  unit: 1/m
+  value: 5
+  # how absorptive the cover is
+  # higher = more light lost in the cover
+
+-
+  name: t_eva
+  unit: m
+  value: 0.0005
+  # EVA thickness
+
+-
+  name: alpha_eva
+  unit: 1/m
+  value: 20
+  # how absorptive the EVA is
+  # again higher = more light lost
+
+-
+  name: tau_misc
+  unit: dimensionless
+  value: 0.98
+  # catches extra transmission losses like dirt/haze/gaps/etc
+
+-
+  name: ar_gain
+  unit: dimensionless
+  value: 0.0
+  # anti-reflective coating gain
+  # leave 0 unless we actually know there is AR benefit
+
+
+# thermal model
 
 -
   name: ambient_temp
   unit: degC
   value: 25
+
 -
   name: temp_coeff
   unit: 1/degC
   value: 0.0035
+  # power loss per degree C above reference temp
 
 -
   name: t_ref
   unit: degC
   value: 25
+  # reference temp for rated performance
+
 -
-  name: noct #How hot the solar cells typically get in real outdoor conditions
-  unit: degC #standard test conditions (could be checked w specific module datasheet)
+  name: noct
+  unit: degC
   value: 45
+  # nominal operating cell temp
+  # simple thermal estimate uses this
+
+
+# optional dirt loss
+
 -
-  name: irradiance_clears
-  unit: W/m^2
-  value: 1000
-
-- 
-  name: mppt_efficiency
+  name: dirt_factor
   unit: dimensionless
-  value: 0.98
+  value: 1.0
+  # 1.0 = no dirt loss
+  # 0.97 = keep 97% of power
 
-#battery
+# aurora params
+-
+  name: cells_per_substring
+  unit: dimensionless
+  value: 43
+
+-
+  name: substrings_per_string
+  unit: dimensionless
+  value: 2
+
+-
+  name: num_strings
+  unit: dimensionless
+  value: 3
+
+-
+  name: isc_ref
+  unit: A
+  value: 6.44
+
+-
+  name: voc_ref
+  unit: V
+  value: 0.741
+
+-
+  name: diode_ideality
+  unit: dimensionless
+  value: 1.2
+
+-
+  name: r_s
+  unit: ohm
+  value: 0.0
+
+-
+  name: r_sh
+  unit: ohm
+  value: 1000000000000
+
+-
+  name: voc_temp_coeff
+  unit: V/degC
+  value: -0.00175
+
+-
+  name: isc_temp_coeff
+  unit: A/degC
+  value: 0.00374
+
+-
+  name: vmpp
+  unit: V
+  value: 0.647
+
+-
+  name: impp
+  unit: A
+  value: 6.114
 
 #battery
 #esr_loss_model
@@ -280,91 +396,3 @@
   name: DC_DC_converter_peak
   unit: amperes
   value: 1.283
-
-# motor_losses
-# Temperature coefficient for copper resistance (α) - how much resistance increases per °C
--
-  name: copper_temp_coefficient_alpha
-  unit: 1/°C
-  value: 0.00393
-
-# Default motor loss model parameters
-# k_H: Hysteresis loss coefficient (magnetic domain flipping in core)
-# k_E: Eddy current loss coefficient (induced circulating currents in core)
-# k_B1, k_B2: Bearing friction coefficients (mechanical friction)
-# k_D: Air drag coefficient (windage from rotor spinning)
-# k_SW: Commutation switching loss coefficient (brushless motor switching)
--
-  name: motor_eta_C_default
-  unit: dimensionless
-  value: 0.97  # Controller efficiency
--
-  name: motor_T_ref_default
-  unit: °C
-  value: 25.0  # Reference temperature for resistance measurements
--
-  name: motor_T_operating_default
-  unit: °C
-  value: 70.0  # Operating temperature
--
-  name: motor_k_H_default
-  unit: W/rpm
-  value: 0.0  # Hysteresis loss
--
-  name: motor_k_E_default
-  unit: W/rpm^2
-  value: 0.0  # Eddy current loss
--
-  name: motor_k_B1_default
-  unit: N·m
-  value: 0.0  # Bearing friction constant term
--
-  name: motor_k_B2_default
-  unit: N·m·min/rad
-  value: 0.0  # Bearing friction speed-dependent term
--
-  name: motor_k_D_default
-  unit: W/rpm^3
-  value: 0.0  # Air drag loss
--
-  name: motor_k_SW_default
-  unit: W/rpm
-  value: 0.0  # Commutation switching loss
--
-  name: motor_k_1_default
-  unit: W/rpm
-  value: 0.0
--
-  name: motor_k_2_default
-  unit: W/rpm^2
-  value: 0.0
--
-  name: motor_k_3_default
-  unit: W/rpm^3
-  value: 0.0
-
-# Motor parameters - general configuration for the vehicle's motor
--
-  name: motor_k_T
-  unit: N·m/A
-  value: 0.1910  # Torque constant
--
-  name: motor_k_C
-  unit: V·min/rad
-  value: 0.020  # Back-EMF constant
--
-  name: motor_k_S
-  unit: N·m/A
-  value: 0.1910  # Torque sensitivity (typically same as k_T)
--
-  name: motor_R_A
-  unit: ohm
-  value: 0.0931  # Armature resistance
--
-  name: motor_R_B
-  unit: ohm
-  value: 0.0233  # Brush/commutation resistance
--
-  name: motor_eta_C
-  unit: dimensionless
-  value: 0.97  # Controller efficiency
