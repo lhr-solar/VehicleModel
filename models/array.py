@@ -8,7 +8,20 @@ from pint.facets.plain import PlainQuantity
 
 from units import Q_
 from models.energy_model import EnergyModel
+from pathlib import Path
+import sys
 
+# makes the Aurora submodule importable if it lives in extern/Aurora
+REPO_ROOT = Path(__file__).resolve().parents[1]
+AURORA_SRC = REPO_ROOT / "extern" / "Aurora" / "core" / "src"
+
+if str(AURORA_SRC) not in sys.path:
+    sys.path.append(str(AURORA_SRC))
+
+from array import Array
+from string import PVString
+from module import PVModule
+from cell import PVCell
 
 
 # just making timestep become seconds in one place so i do not repeat myself 80 times
@@ -21,8 +34,9 @@ def _normalize_timestep_seconds(timestep: object) -> PlainQuantity[float]:
 # this is the "main" array power model interface
 # aka choose how base power is computed: Basic or Irradiance
 class ArrayPowerCore(Protocol):
-    def compute_power(self, params: dict[str, PlainQuantity[float]]) -> PlainQuantity[float]:
-        ...
+    def compute_power(
+        self, params: dict[str, PlainQuantity[float]]
+    ) -> PlainQuantity[float]: ...
 
 
 # this is for optional add-ons like dirt / lamination / thermal
@@ -32,8 +46,7 @@ class ArrayPowerModifier(Protocol):
         self,
         power: PlainQuantity[float],
         params: dict[str, PlainQuantity[float]],
-    ) -> PlainQuantity[float]:
-        ...
+    ) -> PlainQuantity[float]: ...
 
 
 class BasicArrayCore:
@@ -46,8 +59,12 @@ class BasicArrayCore:
     by cell_efficiency here or it would be double-counting.
     """
 
-    def compute_power(self, params: dict[str, PlainQuantity[float]]) -> PlainQuantity[float]:
-        return cast(PlainQuantity[float], (params["num_cells"] * params["p_mpp"]).to("W"))
+    def compute_power(
+        self, params: dict[str, PlainQuantity[float]]
+    ) -> PlainQuantity[float]:
+        return cast(
+            PlainQuantity[float], (params["num_cells"] * params["p_mpp"]).to("W")
+        )
 
 
 class IrradianceArrayCore:
@@ -57,7 +74,9 @@ class IrradianceArrayCore:
 
     """
 
-    def compute_power(self, params: dict[str, PlainQuantity[float]]) -> PlainQuantity[float]:
+    def compute_power(
+        self, params: dict[str, PlainQuantity[float]]
+    ) -> PlainQuantity[float]:
         # if something upstream gives me irradiance directly, use it
         if "irradiance" in params:
             G = params["irradiance"].to("W/m^2")
@@ -118,16 +137,17 @@ class LaminationModifier:
         # keeping this simple for now: equinox placeholder declination
         dec = 0.0
 
-        sin_alpha = (
-            math.sin(lat) * math.sin(dec)
-            + math.cos(lat) * math.cos(dec) * math.cos(h)
-        )
+        sin_alpha = math.sin(lat) * math.sin(dec) + math.cos(lat) * math.cos(
+            dec
+        ) * math.cos(h)
         sin_alpha = max(-1.0, min(1.0, float(sin_alpha)))
 
         # if sun is below horizon then no useful incidence
         return 0.0 if sin_alpha <= 0.0 else float(sin_alpha)
 
-    def _tau_theta(self, theta: float, params: dict[str, PlainQuantity[float]]) -> float:
+    def _tau_theta(
+        self, theta: float, params: dict[str, PlainQuantity[float]]
+    ) -> float:
         n0 = 1.0
         n1 = float(params["n_cover"].magnitude)
 
@@ -146,7 +166,7 @@ class LaminationModifier:
 
         # optional AR coating gain lowers reflectance a bit
         ar_gain = float(params["ar_gain"].magnitude) if "ar_gain" in params else 0.0
-        R *= (1.0 - ar_gain)
+        R *= 1.0 - ar_gain
         T_interface = max(0.0, 1.0 - R)
 
         # Beer-Lambert absorption through the cover stack
@@ -158,9 +178,8 @@ class LaminationModifier:
         # angled rays travel farther through the material
         path_scale = 1.0 / max(1e-6, float(c1))
 
-        T_abs = (
-            math.exp(-a_cover * t_cover * path_scale)
-            * math.exp(-a_eva * t_eva * path_scale)
+        T_abs = math.exp(-a_cover * t_cover * path_scale) * math.exp(
+            -a_eva * t_eva * path_scale
         )
 
         tau_misc = float(params["tau_misc"].magnitude) if "tau_misc" in params else 1.0
@@ -321,8 +340,9 @@ class IrradianceArrayModel(ComposedArrayModel):
     def __init__(self, modifiers: list[ArrayPowerModifier] | None = None):
         super().__init__(core=IrradianceArrayCore(), modifiers=modifiers)
 
- ## Example how to use in main
-'''
+
+## Example how to use in main
+"""
 i want all three modifiers, but i want to use the irradiance core, so:
  model = IrradianceArrayModel(
     modifiers=[
@@ -330,4 +350,99 @@ i want all three modifiers, but i want to use the irradiance core, so:
         LaminationModifier(),
         ThermalModifier(),
     ]
-)'''
+)"""
+
+
+class AuroraArrayModel(EnergyModel):
+    """
+    Uses the Aurora submodule to compute array MPP power.
+
+    idea:
+    - build the Aurora array once in __init__
+    - each timestep, update irradiance + temp
+    - ask Aurora for MPP power
+    - store power/energy the same way as the other array models
+    """
+
+    def __init__(self, params: dict[str, PlainQuantity[float]]):
+        # build the Aurora object once so i am not rebuilding it every update
+        self.array = self._build_aurora_array(params)
+
+    def _build_aurora_array(self, params: dict[str, PlainQuantity[float]]):
+        # these names are placeholders unless your yaml already has them exactly
+        cells_per_module = int(params["cells_per_module"].to("").magnitude)
+        modules_per_string = int(params["modules_per_string"].to("").magnitude)
+        num_strings = int(params["num_strings"].to("").magnitude)
+
+        # Aurora array supports "series" or "parallel"
+        topology = params.get("array_topology", "series")
+        if not isinstance(topology, str):
+            topology = str(topology)
+
+        # make one Aurora cell
+        # you will need to match these constructor args to Aurora's actual PVCell class
+        aurora_cell = PVCell(
+            isc_ref=float(params["isc_ref"].to("A").magnitude),
+            voc_ref=float(params["voc_ref"].to("V").magnitude),
+            imp_ref=float(params["imp_ref"].to("A").magnitude),
+            vmp_ref=float(params["vmp_ref"].to("V").magnitude),
+            alpha_isc=float(params["alpha_isc"].to("A/degC").magnitude),
+            beta_voc=float(params["beta_voc"].to("V/degC").magnitude),
+        )
+
+        # make one module from cells
+        aurora_module = PVModule(
+            cell=aurora_cell,
+            num_cells_series=cells_per_module,
+        )
+
+        # make all the strings
+        string_list = []
+        for _ in range(num_strings):
+            pv_string = PVString(
+                module=aurora_module,
+                num_modules=modules_per_string,
+            )
+            string_list.append(pv_string)
+
+        return Array(string_list=string_list, topology=topology)
+
+    @override
+    def update(
+        self,
+        params: dict[str, PlainQuantity[float]],
+        timestep: object,
+    ) -> PlainQuantity[float]:
+        # same timestep handling as the other models
+        if isinstance(timestep, timedelta):
+            timestep_s: PlainQuantity[float] = Q_(float(timestep.total_seconds()), "s")
+        else:
+            timestep_s = cast(PlainQuantity[float], timestep).to("second")
+
+        # use direct irradiance if present, otherwise use irradiance_clears
+        if "irradiance" in params:
+            irradiance_w_m2 = float(params["irradiance"].to("W/m^2").magnitude)
+        else:
+            irradiance_w_m2 = float(params["irradiance_clears"].to("W/m^2").magnitude)
+
+        # for now just use ambient temp unless you want a more detailed thermal input later
+        temperature_c = float(params["ambient_temp"].to("degC").magnitude)
+
+        # update Aurora conditions
+        self.array.set_conditions(irradiance_w_m2, temperature_c)
+
+        # Aurora gives back Vmp, Imp, Pmp
+        v_mpp, i_mpp, p_mpp = self.array.mpp()
+
+        # store debug stuff too bc that is actually useful
+        params["aurora_v_mpp"] = Q_(v_mpp, "V")
+        params["aurora_i_mpp"] = Q_(i_mpp, "A")
+        params["array_power"] = Q_(p_mpp, "W")
+
+        energy = cast(PlainQuantity[float], params["array_power"] * timestep_s)
+        params["array_energy"] = energy
+        params["total_array_energy"] = cast(
+            PlainQuantity[float], params["total_array_energy"] + energy
+        )
+
+        return energy
