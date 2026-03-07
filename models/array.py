@@ -8,20 +8,21 @@ from pint.facets.plain import PlainQuantity
 
 from units import Q_
 from models.energy_model import EnergyModel
+
 from pathlib import Path
 import sys
 
-# makes the Aurora submodule importable if it lives in extern/Aurora
 REPO_ROOT = Path(__file__).resolve().parents[1]
-AURORA_SRC = REPO_ROOT / "extern" / "Aurora" / "core" / "src"
+AURORA_CORE = REPO_ROOT / "extern" / "Aurora" / "core"
 
-if str(AURORA_SRC) not in sys.path:
-    sys.path.append(str(AURORA_SRC))
+if str(AURORA_CORE) not in sys.path:
+    sys.path.append(str(AURORA_CORE))
 
-from array import Array
-from string import PVString
-from module import PVModule
-from cell import PVCell
+from src.array import Array
+from src.string import PVString
+from src.cell import Cell
+from src.substring import Substring
+from src.bypassdiode import Bypass_Diode
 
 
 # just making timestep become seconds in one place so i do not repeat myself 80 times
@@ -352,60 +353,81 @@ i want all three modifiers, but i want to use the irradiance core, so:
     ]
 )"""
 
+## AURORA INTEGRATION
+
 
 class AuroraArrayModel(EnergyModel):
     """
-    Uses the Aurora submodule to compute array MPP power.
+    Uses Aurora to compute array MPP power.
 
-    idea:
-    - build the Aurora array once in __init__
-    - each timestep, update irradiance + temp
-    - ask Aurora for MPP power
-    - store power/energy the same way as the other array models
+    Aurora build chain:
+      Cell -> Substring -> PVString -> Array
     """
 
     def __init__(self, params: dict[str, PlainQuantity[float]]):
-        # build the Aurora object once so i am not rebuilding it every update
+        # build the Aurora object once so i am not rebuilding it every timestep
         self.array = self._build_aurora_array(params)
 
-    def _build_aurora_array(self, params: dict[str, PlainQuantity[float]]):
-        # these names are placeholders unless your yaml already has them exactly
-        cells_per_module = int(params["cells_per_module"].to("").magnitude)
-        modules_per_string = int(params["modules_per_string"].to("").magnitude)
-        num_strings = int(params["num_strings"].to("").magnitude)
+    def _build_aurora_array(self, params: dict[str, PlainQuantity[float]]) -> Array:
+        # how the Aurora structure is put together
+        cells_per_substring = int(params["cells_per_substring"].magnitude)
+        substrings_per_string = int(params["substrings_per_string"].magnitude)
+        num_strings = int(params["num_strings"].magnitude)
 
-        # Aurora array supports "series" or "parallel"
-        topology = params.get("array_topology", "series")
-        if not isinstance(topology, str):
-            topology = str(topology)
+        # basic Aurora cell parameters
+        isc_ref = float(params["isc_ref"].to("A").magnitude)
+        voc_ref = float(params["voc_ref"].to("V").magnitude)
+        diode_ideality = float(params["diode_ideality"].magnitude)
 
-        # make one Aurora cell
-        # you will need to match these constructor args to Aurora's actual PVCell class
-        aurora_cell = PVCell(
-            isc_ref=float(params["isc_ref"].to("A").magnitude),
-            voc_ref=float(params["voc_ref"].to("V").magnitude),
-            imp_ref=float(params["imp_ref"].to("A").magnitude),
-            vmp_ref=float(params["vmp_ref"].to("V").magnitude),
-            alpha_isc=float(params["alpha_isc"].to("A/degC").magnitude),
-            beta_voc=float(params["beta_voc"].to("V/degC").magnitude),
+        # optional params with defaults matching Aurora's Cell class
+        r_s = float(params.get("r_s", Q_(0.0, "ohm")).to("ohm").magnitude)
+        r_sh = float(params.get("r_sh", Q_(1e12, "ohm")).to("ohm").magnitude)
+
+        voc_temp_coeff = float(
+            params.get("voc_temp_coeff", Q_(-0.00175, "V/degC")).to("V/degC").magnitude
+        )
+        isc_temp_coeff = float(
+            params.get("isc_temp_coeff", Q_(0.00374, "A/degC")).to("A/degC").magnitude
         )
 
-        # make one module from cells
-        aurora_module = PVModule(
-            cell=aurora_cell,
-            num_cells_series=cells_per_module,
-        )
+        vmpp = float(params.get("vmpp", Q_(0.647, "V")).to("V").magnitude)
+        impp = float(params.get("impp", Q_(6.114, "A")).to("A").magnitude)
 
-        # make all the strings
-        string_list = []
-        for _ in range(num_strings):
-            pv_string = PVString(
-                module=aurora_module,
-                num_modules=modules_per_string,
+        # keeping this simple for now
+        # bypass diodes can be added later if yall want them
+        bypass = None
+
+        def make_cell() -> Cell:
+            return Cell(
+                isc_ref=isc_ref,
+                voc_ref=voc_ref,
+                diode_ideality=diode_ideality,
+                r_sh=int(r_sh),
+                voc_temp_coeff=voc_temp_coeff,
+                isc_temp_coeff=isc_temp_coeff,
+                irradiance=1000.0,
+                temperature_c=25.0,
+                vmpp=vmpp,
+                impp=impp,
+                autofit=False,
             )
+
+        string_list: list[PVString] = []
+
+        for _ in range(num_strings):
+            substring_list: list[Substring] = []
+
+            for _ in range(substrings_per_string):
+                cell_list = [make_cell() for _ in range(cells_per_substring)]
+                substring = Substring(
+                    cell_list=cell_list, bypass=cast(Bypass_Diode, None)
+                )
+                substring_list.append(substring)
+
+            pv_string = PVString(substrings=substring_list)
             string_list.append(pv_string)
 
-        return Array(string_list=string_list, topology=topology)
+        return Array(string_list=string_list, topology="series")
 
     @override
     def update(
@@ -413,28 +435,29 @@ class AuroraArrayModel(EnergyModel):
         params: dict[str, PlainQuantity[float]],
         timestep: object,
     ) -> PlainQuantity[float]:
-        # same timestep handling as the other models
+        # same timestep handling as the other array models
         if isinstance(timestep, timedelta):
             timestep_s: PlainQuantity[float] = Q_(float(timestep.total_seconds()), "s")
         else:
             timestep_s = cast(PlainQuantity[float], timestep).to("second")
 
-        # use direct irradiance if present, otherwise use irradiance_clears
+        # use measured irradiance if something upstream sets it
+        # otherwise use the yaml clear-sky value
         if "irradiance" in params:
             irradiance_w_m2 = float(params["irradiance"].to("W/m^2").magnitude)
         else:
             irradiance_w_m2 = float(params["irradiance_clears"].to("W/m^2").magnitude)
 
-        # for now just use ambient temp unless you want a more detailed thermal input later
+        # for now just use ambient temp as the cell condition input
         temperature_c = float(params["ambient_temp"].to("degC").magnitude)
 
-        # update Aurora conditions
+        # tell Aurora the operating conditions
         self.array.set_conditions(irradiance_w_m2, temperature_c)
 
-        # Aurora gives back Vmp, Imp, Pmp
+        # Aurora returns Vmp, Imp, Pmp
         v_mpp, i_mpp, p_mpp = self.array.mpp()
 
-        # store debug stuff too bc that is actually useful
+        # save useful debug stuff too
         params["aurora_v_mpp"] = Q_(v_mpp, "V")
         params["aurora_i_mpp"] = Q_(i_mpp, "A")
         params["array_power"] = Q_(p_mpp, "W")
