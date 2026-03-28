@@ -269,6 +269,40 @@ class ThermalModifier:
         return cast(PlainQuantity[float], (power * f_T_q).to("W"))
 
 
+class CloudCoverModifier(ArrayPowerModifier):
+    """
+    Reduces array power based on weather cloud cover percentage.
+
+    Assumes:
+      - params["weather_cloud_cover"] exists as a percent from 0 to 100
+      - 0% clouds = no reduction
+      - 100% clouds = up to 80% reduction
+    """
+
+    @override
+    def apply(
+        self,
+        power: PlainQuantity[float],
+        params: dict[str, PlainQuantity[float]],
+    ) -> PlainQuantity[float]:
+        cloud_cover = params.get("weather_cloud_cover")
+
+        # if cloud cover is missing, just leave power alone
+        if cloud_cover is None:
+            return power
+
+        cloud_pct = cloud_cover.magnitude
+
+        # keep it sane just in case
+        cloud_pct = max(0.0, min(100.0, cloud_pct))
+
+        # 100% cloud cover -> multiply power by 0.2
+        # 0% cloud cover -> multiply power by 1.0
+        cloud_modifier = 1.0 - 0.8 * (cloud_pct / 100.0)
+
+        return cast(PlainQuantity[float], power * cloud_modifier)
+
+
 class ComposedArrayModel(EnergyModel):
     """
     Flexible array model.
@@ -341,22 +375,20 @@ class IrradianceArrayModel(ComposedArrayModel):
     def __init__(self, modifiers: list[ArrayPowerModifier] | None = None):
         super().__init__(core=IrradianceArrayCore(), modifiers=modifiers)
 
-        cloud_cover = params.get("weather_cloud_cover")
-        if cloud_cover is not None:
-            cloud_modifier = 1.0 - (cloud_cover.magnitude / 100.0) * 0.8
-            base_power = base_power * cloud_modifier
-
-        params["array_power"] = base_power * factor
 
 ## Example how to use in main
 """
 i want all three modifiers, but i want to use the irradiance core, so:
- model = IrradianceArrayModel(
+ model = 
+    ComposedArrayModel(
+    core=IrradianceArrayCore(),
     modifiers=[
+        CloudCoverModifier(),
         DirtModifier(),
         LaminationModifier(),
         ThermalModifier(),
-    ]
+    ],
+)
 )"""
 
 ## AURORA INTEGRATION

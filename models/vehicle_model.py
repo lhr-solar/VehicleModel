@@ -34,12 +34,18 @@ class VehicleModel:
         self.prev_params = self.params.copy()
 
         if self.weather_model is not None and "current_time_ts" in self.params:
-            current_time = datetime.fromtimestamp(self.params["current_time_ts"].magnitude)
+            current_time = datetime.fromtimestamp(
+                self.params["current_time_ts"].magnitude
+            )
             weather = self.weather_model.get_weather_at_time(current_time)
             self.params["weather_temperature"] = Q_(weather["temperature"], "celsius")
-            self.params["weather_cloud_cover"] = Q_(weather["cloud_cover"], "dimensionless")
+            self.params["weather_cloud_cover"] = Q_(
+                weather["cloud_cover"], "dimensionless"
+            )
             self.params["weather_wind_speed"] = Q_(weather["wind_speed"], "m/s")
-            self.params["weather_wind_direction"] = Q_(weather["wind_direction"], "degree")
+            self.params["weather_wind_direction"] = Q_(
+                weather["wind_direction"], "degree"
+            )
             self.params["weather_precipitation"] = Q_(weather["precipitation"], "mm")
 
         for m in self.models:
