@@ -341,6 +341,12 @@ class IrradianceArrayModel(ComposedArrayModel):
     def __init__(self, modifiers: list[ArrayPowerModifier] | None = None):
         super().__init__(core=IrradianceArrayCore(), modifiers=modifiers)
 
+        cloud_cover = params.get("weather_cloud_cover")
+        if cloud_cover is not None:
+            cloud_modifier = 1.0 - (cloud_cover.magnitude / 100.0) * 0.8
+            base_power = base_power * cloud_modifier
+
+        params["array_power"] = base_power * factor
 
 ## Example how to use in main
 """
