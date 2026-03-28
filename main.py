@@ -5,7 +5,13 @@ from models.vehicle_model import VehicleModel
 from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
-from models.array import SCPArrayModel
+from models.array import (
+    BasicArrayModel,
+    DirtModifier,
+    IrradianceArrayModel,
+    LaminationModifier,
+    ThermalModifier,
+)
 from models.motor_losses import MotorLossModel
 from models.weather_model import WeatherAPI
 from units import UNIT_REGISTRY, Q_
@@ -365,7 +371,15 @@ def main():
     m = VehicleModel(parse_yaml("params.yaml"))
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
-    m.add_model(SCPArrayModel())
+    m.add_model(
+        IrradianceArrayModel(
+            modifiers=[
+                DirtModifier(),
+                LaminationModifier(),
+                ThermalModifier(),
+            ]
+        )
+    )
     m.add_model(MotorLossModel())
     m.set_battery_model(BatteryModel())
 

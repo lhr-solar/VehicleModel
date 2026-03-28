@@ -19,3 +19,8 @@ dependencies = [
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+extraPaths = ["./extern/Aurora/core"]
+exclude = [
+  "extern/Aurora", "**/node_modules", "**/__pycache__", "**/.*", ".venv"
+]
+
