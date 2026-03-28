@@ -7,7 +7,7 @@ from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
-from models.weather_model import WeatherModel
+from models.weather_model import WeatherAPI
 from units import UNIT_REGISTRY, Q_
 
 from typing import TypedDict, cast
@@ -68,7 +68,7 @@ def run_simulation(m: VehicleModel, log_params: list[str]) -> pd.DataFrame:
     # Initialize weather model if enabled
     if m.params.get("use_weather_data", Q_(0, "dimensionless")).magnitude > 0:
         try:
-            weather_model = WeatherModel()
+            weather_model = WeatherAPI()
             latitude = m.params["latitude_deg"].magnitude
             longitude = m.params["longitude_deg"].magnitude
 

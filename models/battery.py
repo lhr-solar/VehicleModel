@@ -12,11 +12,9 @@ class ESRBatteryLossModel(EnergyModel):
         self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
     ) -> PlainQuantity[float]:
         # Pack Resistance
-        base_resistance = (
+        params["pack_resistance"] = (
             params["cell_internal_impedance"] / params["cells_in_parallel"]
         ) * params["cells_in_series"]
-
-        params["pack_resistance"] = base_resistance
 
         # P = I^2 * R
         params["current_draw"] = (params["drag_power"] + params["rr_power"]) / params[

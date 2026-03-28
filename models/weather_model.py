@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Dict
 
 
-class WeatherModel:
+class WeatherAPI:
     def __init__(self):
         self.weather_data = None
 
