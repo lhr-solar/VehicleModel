@@ -45,8 +45,12 @@ class SCPDragModel(EnergyModel):
     def update(
         self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
     ) -> PlainQuantity[float]:
-        wind_speed = params.get("weather_wind_speed", Quantity(0, "m/s")).to("m/s").magnitude
-        wind_direction = params.get("weather_wind_direction", Quantity(0, "degree")).magnitude
+        wind_speed = (
+            params.get("weather_wind_speed", Quantity(0, "m/s")).to("m/s").magnitude
+        )
+        wind_direction = params.get(
+            "weather_wind_direction", Quantity(0, "degree")
+        ).magnitude
         vehicle_heading = params.get("vehicle_heading", Quantity(0, "degree")).magnitude
         vehicle_speed = params["velocity"].to("m/s").magnitude
 

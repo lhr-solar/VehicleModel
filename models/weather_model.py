@@ -73,4 +73,3 @@ class WeatherAPI:
             "wind_direction": float(row["wind_direction"]),
             "precipitation": float(row["precipitation"]),
         }
-
