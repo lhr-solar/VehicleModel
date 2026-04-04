@@ -234,6 +234,11 @@ class SimulationGUI:
             self._log("Simulation already running!")
             return
 
+        self._last_sim_tab = (
+            self.notebook.tab(self.notebook.select(), "text")
+            if self.notebook.tabs()
+            else None
+        )
         for tab in self.notebook.tabs():
             self.notebook.forget(tab)
 
@@ -313,6 +318,11 @@ class SimulationGUI:
 
             if valid_params:
                 self._create_graphs(valid_params)
+                if self._last_sim_tab:
+                    for tab in self.notebook.tabs():
+                        if self.notebook.tab(tab, "text") == self._last_sim_tab:
+                            self.notebook.select(tab)
+                            break
                 self.progress_label.config(
                     text="Status: Complete (with warnings)"
                     if invalid_params
@@ -721,6 +731,11 @@ class SimulationGUI:
             self._gs_display_config(selection[0])
 
     def _gs_display_config(self, index):
+        current_tab = (
+            self.gs_notebook.tab(self.gs_notebook.select(), "text")
+            if self.gs_notebook.tabs()
+            else None
+        )
         for tab in self.gs_notebook.tabs():
             self.gs_notebook.forget(tab)
 
@@ -779,6 +794,12 @@ class SimulationGUI:
 
             toolbar = NavigationToolbar2Tk(canvas, tab_frame)
             toolbar.update()
+
+        if current_tab:
+            for tab in self.gs_notebook.tabs():
+                if self.gs_notebook.tab(tab, "text") == current_tab:
+                    self.gs_notebook.select(tab)
+                    break
 
     # ── Waypoints Tab ───────────────────────────────────────────────────────
 
@@ -1010,6 +1031,11 @@ class SimulationGUI:
         if self.wp_is_running:
             return
 
+        self._last_wp_tab = (
+            self.wp_notebook.tab(self.wp_notebook.select(), "text")
+            if self.wp_notebook.tabs()
+            else None
+        )
         for tab in self.wp_notebook.tabs():
             self.wp_notebook.forget(tab)
         self.wp_console.delete(1.0, tk.END)
@@ -1088,6 +1114,11 @@ class SimulationGUI:
 
             self._wp_log(f"Done! {len(self.wp_df)} timesteps.")
             self._wp_create_graphs()
+            if self._last_wp_tab:
+                for tab in self.wp_notebook.tabs():
+                    if self.wp_notebook.tab(tab, "text") == self._last_wp_tab:
+                        self.wp_notebook.select(tab)
+                        break
             self.wp_status_label.config(text="Status: Complete", foreground="green")
 
         except Exception as e:
