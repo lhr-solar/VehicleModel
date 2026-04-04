@@ -117,7 +117,11 @@ class SimulationGUI:
             "cell_efficiency",
         ]
         sim_params = [
-            (name, str(self.yaml_params[name].magnitude), f"{self.yaml_params[name].units:~}")
+            (
+                name,
+                str(self.yaml_params[name].magnitude),
+                f"{self.yaml_params[name].units:~}",
+            )
             for name in param_names
             if name in self.yaml_params
         ]
@@ -725,7 +729,7 @@ class SimulationGUI:
         plot_params = [c for c in df.columns if c not in ("date", "time", "datetime")]
 
         for param in plot_params:
-            if df[param].isna().all():
+            if bool(df[param].isna().all()):
                 continue
 
             tab_frame = ttk.Frame(self.gs_notebook)
@@ -776,7 +780,6 @@ class SimulationGUI:
             toolbar = NavigationToolbar2Tk(canvas, tab_frame)
             toolbar.update()
 
-
     # ── Waypoints Tab ───────────────────────────────────────────────────────
 
     def _create_wp_tab(self, parent):
@@ -788,9 +791,13 @@ class SimulationGUI:
         control_container.grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=5)
 
         canvas = tk.Canvas(control_container, width=400)
-        scrollbar = ttk.Scrollbar(control_container, orient="vertical", command=canvas.yview)
+        scrollbar = ttk.Scrollbar(
+            control_container, orient="vertical", command=canvas.yview
+        )
         cf = ttk.Frame(canvas, padding="10")
-        cf.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        cf.bind(
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
         canvas.create_window((0, 0), window=cf, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         canvas.pack(side="left", fill="both", expand=True)
@@ -807,9 +814,17 @@ class SimulationGUI:
         )
         row += 1
 
-        vel_unit_label = f"{self.yaml_params['velocity'].units:~}" if "velocity" in self.yaml_params else "mph"
-        ttk.Label(cf, text="Time (h)", font=("Arial", 9, "bold")).grid(row=row, column=0, padx=5)
-        ttk.Label(cf, text=f"Velocity ({vel_unit_label})", font=("Arial", 9, "bold")).grid(row=row, column=1, padx=5)
+        vel_unit_label = (
+            f"{self.yaml_params['velocity'].units:~}"
+            if "velocity" in self.yaml_params
+            else "mph"
+        )
+        ttk.Label(cf, text="Time (h)", font=("Arial", 9, "bold")).grid(
+            row=row, column=0, padx=5
+        )
+        ttk.Label(
+            cf, text=f"Velocity ({vel_unit_label})", font=("Arial", 9, "bold")
+        ).grid(row=row, column=1, padx=5)
         row += 1
 
         self.wp_rows_container = ttk.Frame(cf)
@@ -827,7 +842,9 @@ class SimulationGUI:
         row += 1
 
         # Sim timestep
-        ttk.Label(cf, text="Sim timestep (s):", font=("Arial", 9)).grid(row=row, column=0, sticky=tk.W, pady=2)
+        ttk.Label(cf, text="Sim timestep (s):", font=("Arial", 9)).grid(
+            row=row, column=0, sticky=tk.W, pady=2
+        )
         self.wp_sim_timestep_entry = ttk.Entry(cf, width=10)
         self.wp_sim_timestep_entry.insert(0, "60")
         self.wp_sim_timestep_entry.grid(row=row, column=1, sticky=tk.W, pady=2)
@@ -850,23 +867,32 @@ class SimulationGUI:
 
         self.wp_log_param_vars = {}
         wp_common_params = [
-            "velocity", "total_energy", "array_power", "array_energy",
-            "drag_power", "rr_power", "total_array_energy",
+            "velocity",
+            "total_energy",
+            "array_power",
+            "array_energy",
+            "drag_power",
+            "rr_power",
+            "total_array_energy",
         ]
         for param in wp_common_params:
-            var = tk.BooleanVar(value=param in ["velocity", "total_energy", "array_power"])
+            var = tk.BooleanVar(
+                value=param in ["velocity", "total_energy", "array_power"]
+            )
             ttk.Checkbutton(cf, text=param, variable=var).grid(
                 row=row, column=0, columnspan=3, sticky=tk.W, pady=1
             )
             self.wp_log_param_vars[param] = var
             row += 1
 
-        ttk.Label(cf, text="Custom parameters (comma-separated):", font=("Arial", 9)).grid(
-            row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 2)
-        )
+        ttk.Label(
+            cf, text="Custom parameters (comma-separated):", font=("Arial", 9)
+        ).grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 2))
         row += 1
         self.wp_custom_params_entry = ttk.Entry(cf, width=30)
-        self.wp_custom_params_entry.grid(row=row, column=0, columnspan=3, sticky=tk.EW, pady=5)
+        self.wp_custom_params_entry.grid(
+            row=row, column=0, columnspan=3, sticky=tk.EW, pady=5
+        )
         row += 1
 
         ttk.Separator(cf, orient="horizontal").grid(
@@ -881,8 +907,17 @@ class SimulationGUI:
         row += 1
 
         self.wp_param_entries = {}
-        param_names = ["total_energy", "weight", "drag_coeff", "frontal_area",
-                       "air_density", "mu_rr", "num_cells", "p_mpp", "cell_efficiency"]
+        param_names = [
+            "total_energy",
+            "weight",
+            "drag_coeff",
+            "frontal_area",
+            "air_density",
+            "mu_rr",
+            "num_cells",
+            "p_mpp",
+            "cell_efficiency",
+        ]
         for name in param_names:
             if name not in self.yaml_params:
                 continue
@@ -892,7 +927,9 @@ class SimulationGUI:
             entry = ttk.Entry(entry_frame, width=12)
             entry.insert(0, str(self.yaml_params[name].magnitude))
             entry.pack(side=tk.LEFT, padx=(0, 4))
-            ttk.Label(entry_frame, text=f"{self.yaml_params[name].units:~}", foreground="gray").pack(side=tk.LEFT)
+            ttk.Label(
+                entry_frame, text=f"{self.yaml_params[name].units:~}", foreground="gray"
+            ).pack(side=tk.LEFT)
             self.wp_param_entries[name] = (entry, f"{self.yaml_params[name].units:~}")
             row += 1
 
@@ -901,9 +938,13 @@ class SimulationGUI:
         )
         row += 1
 
-        self.wp_run_button = ttk.Button(cf, text="Run Waypoint Sim", command=self._wp_run)
+        self.wp_run_button = ttk.Button(
+            cf, text="Run Waypoint Sim", command=self._wp_run
+        )
         self.wp_run_button.grid(row=row, column=0, sticky=tk.EW, padx=(0, 5), pady=10)
-        self.wp_stop_button = ttk.Button(cf, text="Stop", command=self._wp_stop, state="disabled")
+        self.wp_stop_button = ttk.Button(
+            cf, text="Stop", command=self._wp_stop, state="disabled"
+        )
         self.wp_stop_button.grid(row=row, column=1, sticky=tk.EW, padx=(5, 0), pady=10)
         row += 1
 
@@ -911,9 +952,13 @@ class SimulationGUI:
         self.wp_status_label.grid(row=row, column=0, columnspan=3, pady=5)
         row += 1
 
-        ttk.Label(cf, text="Console Output:").grid(row=row, column=0, sticky=tk.W, pady=5)
+        ttk.Label(cf, text="Console Output:").grid(
+            row=row, column=0, sticky=tk.W, pady=5
+        )
         row += 1
-        self.wp_console = scrolledtext.ScrolledText(cf, width=40, height=8, wrap=tk.WORD)
+        self.wp_console = scrolledtext.ScrolledText(
+            cf, width=40, height=8, wrap=tk.WORD
+        )
         self.wp_console.grid(row=row, column=0, columnspan=3, sticky=tk.NSEW, pady=5)
 
         # Add two default waypoints (time in hours)
@@ -933,15 +978,21 @@ class SimulationGUI:
         row_frame = ttk.Frame(self.wp_rows_container)
         row_frame.pack(fill=tk.X, pady=2)
 
-        ttk.Entry(row_frame, textvariable=time_var, width=10).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Entry(row_frame, textvariable=vel_var, width=10).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Entry(row_frame, textvariable=time_var, width=10).pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
+        ttk.Entry(row_frame, textvariable=vel_var, width=10).pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
 
         row_data = {"frame": row_frame, "time": time_var, "vel": vel_var}
         self.wp_rows.append(row_data)
 
         ttk.Button(
-            row_frame, text="x", width=2,
-            command=lambda r=row_data: self._wp_remove_row(r)
+            row_frame,
+            text="x",
+            width=2,
+            command=lambda r=row_data: self._wp_remove_row(r),
         ).pack(side=tk.LEFT)
 
     def _wp_remove_row(self, row_data):
@@ -1003,7 +1054,9 @@ class SimulationGUI:
             except ValueError:
                 sim_timestep_s = 60.0
 
-            self._wp_log(f"Running with {len(waypoints)} waypoints, timestep={sim_timestep_s}s...")
+            self._wp_log(
+                f"Running with {len(waypoints)} waypoints, timestep={sim_timestep_s}s..."
+            )
 
             # Collect param overrides
             param_overrides = {}
@@ -1021,7 +1074,9 @@ class SimulationGUI:
                 log_params = ["velocity", "total_energy", "array_power"]
 
             self.wp_df, self.wp_units_map = run_waypoint_sim(
-                waypoints, log_params, param_overrides,
+                waypoints,
+                log_params,
+                param_overrides,
                 sim_timestep_s=sim_timestep_s,
                 stop_event=self._wp_stop_event,
             )
@@ -1057,7 +1112,7 @@ class SimulationGUI:
         for param in self.wp_df.columns:
             if param in skip:
                 continue
-            if self.wp_df[param].isna().all():
+            if bool(self.wp_df[param].isna().all()):
                 continue
 
             tab_frame = ttk.Frame(self.wp_notebook)
@@ -1067,8 +1122,11 @@ class SimulationGUI:
             ax = fig.add_subplot(111)
 
             ax.plot(
-                times, self.wp_df[param],
-                linewidth=2, marker="o", markersize=3,
+                times,
+                self.wp_df[param],
+                linewidth=2,
+                marker="o",
+                markersize=3,
                 markevery=max(1, len(self.wp_df) // 50),
                 color=PLOT_COLOR,
             )
@@ -1080,7 +1138,9 @@ class SimulationGUI:
 
             ax.set_xlabel("Time", fontsize=10, fontweight="bold")
             param_unit = self.wp_units_map.get(param, "dimensionless")
-            ylabel = f"{param} ({param_unit})" if param_unit != "dimensionless" else param
+            ylabel = (
+                f"{param} ({param_unit})" if param_unit != "dimensionless" else param
+            )
             ax.set_ylabel(ylabel, fontsize=10, fontweight="bold")
             ax.set_title(f"{param} Over Time", fontsize=12, fontweight="bold", pad=10)
             ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
