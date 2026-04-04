@@ -112,7 +112,9 @@ def run_waypoint_sim(
 
             current_time += timedelta(seconds=sub_dt)
             sec_since_midnight = (
-                current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+                current_time.hour * 3600
+                + current_time.minute * 60
+                + current_time.second
             )
             m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
             m.update()
