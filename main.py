@@ -1,4 +1,4 @@
-from pint import UnitRegistry, Quantity
+from pint import Quantity
 from pint.facets.plain import PlainQuantity
 from models.lv_draw_model import LVDrawModel
 from models.vehicle_model import VehicleModel
@@ -7,7 +7,7 @@ from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
-from units import UNIT_REGISTRY, Q_
+from units import Q_
 
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
@@ -70,9 +70,9 @@ def run_waypoint_sim(
     log_params: list[str],
     param_overrides: dict,
     sim_timestep_s: float = 60.0,
+    integration_steps: int = 10,
     stop_event: threading.Event | None = None,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
-    """Run simulation with a cubic spline velocity profile from (time_s, velocity) waypoints."""
     params = parse_yaml("params.yaml")
     params.update(param_overrides)
 
@@ -82,9 +82,10 @@ def run_waypoint_sim(
     vel_unit = params["velocity"].units
 
     m = build_model(params)
-    m.params["timestep"] = Q_(sim_timestep_s, "seconds")
 
-    # Always run to 5 PM (8 hours after 9 AM start)
+    sub_dt = sim_timestep_s / integration_steps
+    m.params["timestep"] = Q_(sub_dt, "seconds")
+
     race_duration_s = params["raceday_len"].to("seconds").magnitude
     total_steps = int(race_duration_s / sim_timestep_s)
     last_vel = float(spline(times_wp[-1]))
@@ -101,23 +102,25 @@ def run_waypoint_sim(
         if stop_event is not None and stop_event.is_set():
             break
 
-        t = times_wp[0] + i * sim_timestep_s
-        velocity = float(spline(t)) if t <= times_wp[-1] else last_vel
+        row_time = current_time
+        t_outer = times_wp[0] + i * sim_timestep_s
 
-        m.params["velocity"] = Q_(velocity, vel_unit)
+        for j in range(integration_steps):
+            t_sub = t_outer + (j + 0.5) * sub_dt
+            velocity = float(spline(t_sub)) if t_sub <= times_wp[-1] else last_vel
+            m.params["velocity"] = Q_(velocity, vel_unit)
 
-        current_time += timedelta(seconds=sim_timestep_s)
-        sec_since_midnight = (
-            current_time.hour * 3600 + current_time.minute * 60 + current_time.second
-        )
-        m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
-
-        m.update()
+            current_time += timedelta(seconds=sub_dt)
+            sec_since_midnight = (
+                current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+            )
+            m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+            m.update()
 
         row: dict = {
-            "date": current_time.strftime("%Y-%m-%d"),
-            "time": current_time.strftime("%H:%M:%S"),
-            "datetime": current_time,
+            "date": row_time.strftime("%Y-%m-%d"),
+            "time": row_time.strftime("%H:%M:%S"),
+            "datetime": row_time,
         }
         for name in all_log_params:
             value = m.params.get(name)
