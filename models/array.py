@@ -61,7 +61,7 @@ class SCPArrayModel(EnergyModel):
 
         cloud_cover = params.get("weather_cloud_cover")
         if cloud_cover is not None:
-            cloud_modifier = 1.0 - (cloud_cover.magnitude / 100.0) * 0.8
+            cloud_modifier = 1.0 - (cloud_cover.magnitude / 100.0)
             base_power = base_power * cloud_modifier
 
         params["array_power"] = base_power * factor
