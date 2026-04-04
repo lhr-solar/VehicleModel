@@ -743,8 +743,12 @@ class SimulationGUI:
 
             for label, df, units_map in self.gs_results:
                 self.gs_config_listbox.insert(tk.END, label)
-                config_dir = "output/grid_search/" + label.replace(", ", "_").replace(" ", "_")
-                plot_params = [c for c in df.columns if c not in ("date", "time", "datetime")]
+                config_dir = "output/grid_search/" + label.replace(", ", "_").replace(
+                    " ", "_"
+                )
+                plot_params = [
+                    c for c in df.columns if c not in ("date", "time", "datetime")
+                ]
                 prev_backend = matplotlib.get_backend()
                 matplotlib.use("Agg")
                 generate_graphs(df, plot_params, units_map, config_dir)
