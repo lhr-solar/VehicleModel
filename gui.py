@@ -5,13 +5,14 @@ from tkinter import ttk, scrolledtext
 from typing import cast
 import ttkbootstrap as tb  # type: ignore
 
+import matplotlib
 import matplotlib.dates as mdates
 import pandas as pd
 from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from main import gui_run, gui_grid_search, parse_yaml, run_waypoint_sim
+from main import gui_run, gui_grid_search, generate_graphs, parse_yaml, run_waypoint_sim
 from units import Q_
 
 PLOT_COLOR = "#23B982"
@@ -740,8 +741,14 @@ class SimulationGUI:
 
             self._gs_log(f"Done! {len(self.gs_results)} configuration(s) completed.")
 
-            for label, _, _ in self.gs_results:
+            for label, df, units_map in self.gs_results:
                 self.gs_config_listbox.insert(tk.END, label)
+                config_dir = "output/grid_search/" + label.replace(", ", "_").replace(" ", "_")
+                plot_params = [c for c in df.columns if c not in ("date", "time", "datetime")]
+                prev_backend = matplotlib.get_backend()
+                matplotlib.use("Agg")
+                generate_graphs(df, plot_params, units_map, config_dir)
+                matplotlib.use(prev_backend)
 
             if self.gs_results:
                 self.gs_config_listbox.selection_set(0)
