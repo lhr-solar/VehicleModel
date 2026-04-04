@@ -277,7 +277,7 @@ def generate_graphs(
 
 
 def grid_search(
-    search_params: dict[str, tuple[int, int, int, str]],
+    search_params: dict[str, tuple[float, float, float, str]],
     output_dir: str,
     csv_name: str,
     m: VehicleModel,
