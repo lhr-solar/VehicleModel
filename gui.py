@@ -2,6 +2,7 @@ import threading
 import traceback
 import tkinter as tk
 from tkinter import ttk, scrolledtext
+from typing import cast
 import ttkbootstrap as tb  # type: ignore
 
 import matplotlib.dates as mdates
@@ -27,6 +28,8 @@ class SimulationGUI:
         self.units_map = {}
         self.is_running = False
         self._stop_event = threading.Event()
+        self._last_sim_tab: str | None = None
+        self._suppress_sim_tab_update = False
 
         # Grid search tab state
         self.gs_results = []  # list of (label, df, units_map)
@@ -223,6 +226,13 @@ class SimulationGUI:
         graph_frame.grid(row=0, column=1, sticky=tk.NSEW, padx=5, pady=5)
         self.notebook = ttk.Notebook(graph_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.notebook.bind(
+            "<<NotebookTabChanged>>", lambda e: self._on_sim_tab_changed()
+        )
+
+    def _on_sim_tab_changed(self):
+        if not self._suppress_sim_tab_update and self.notebook.tabs():
+            self._last_sim_tab = self.notebook.tab(self.notebook.select(), "text")
 
     def _log(self, message):
         self.console.insert(tk.END, f"{message}\n")
@@ -234,11 +244,10 @@ class SimulationGUI:
             self._log("Simulation already running!")
             return
 
-        self._last_sim_tab = (
-            self.notebook.tab(self.notebook.select(), "text")
-            if self.notebook.tabs()
-            else None
-        )
+        if self.notebook.tabs():
+            self._last_sim_tab = self.notebook.tab(self.notebook.select(), "text")
+
+        self._suppress_sim_tab_update = True
         for tab in self.notebook.tabs():
             self.notebook.forget(tab)
 
@@ -323,6 +332,9 @@ class SimulationGUI:
                         if self.notebook.tab(tab, "text") == self._last_sim_tab:
                             self.notebook.select(tab)
                             break
+                    else:
+                        self.notebook.select(self.notebook.tabs()[0])
+                self._suppress_sim_tab_update = False
                 self.progress_label.config(
                     text="Status: Complete (with warnings)"
                     if invalid_params
@@ -344,9 +356,61 @@ class SimulationGUI:
             self.progress_label.config(text="Status: Error", foreground="red")
 
         finally:
+            self._suppress_sim_tab_update = False
             self.is_running = False
             self.run_button.config(state="normal")
             self.stop_button.config(state="disabled")
+
+    def _add_graph_tab(
+        self,
+        notebook: ttk.Notebook,
+        tab_name: str,
+        times: pd.Series,
+        series: pd.Series,
+        ylabel: str,
+        title: str,
+        ylim: tuple[float, float] | None = None,
+    ) -> None:
+        tab_frame = ttk.Frame(notebook)
+        notebook.add(tab_frame, text=tab_name)
+
+        fig = Figure(figsize=(10, 6), dpi=100)
+        ax = fig.add_subplot(111)
+
+        ax.plot(
+            times,
+            series,
+            linewidth=2,
+            marker="o",
+            markersize=3,
+            markevery=max(1, len(series) // 50),
+            color=PLOT_COLOR,
+        )
+
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+        fig.autofmt_xdate(rotation=45, ha="right")
+
+        date = times.dt.date.iloc[0]
+        ax.set_xlim(
+            float(mdates.date2num(pd.Timestamp(f"{date} 09:00:00"))),
+            float(mdates.date2num(pd.Timestamp(f"{date} 17:00:00"))),
+        )
+
+        ax.set_xlabel("Time", fontsize=10, fontweight="bold")
+        ax.set_ylabel(ylabel, fontsize=10, fontweight="bold")
+        ax.set_title(title, fontsize=12, fontweight="bold", pad=10)
+        ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
+
+        if ylim is not None:
+            ax.set_ylim(*ylim)
+
+        fig.tight_layout()
+
+        canvas = FigureCanvasTkAgg(fig, master=tab_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        NavigationToolbar2Tk(canvas, tab_frame).update()
 
     def _create_graphs(self, params):
         if self.df is None or self.df.empty:
@@ -360,57 +424,27 @@ class SimulationGUI:
                 self._log(f"Warning: Parameter '{param}' not found in data")
                 continue
 
-            tab_frame = ttk.Frame(self.notebook)
-            self.notebook.add(tab_frame, text=param)
-
-            fig = Figure(figsize=(10, 6), dpi=100)
-            ax = fig.add_subplot(111)
-
-            ax.plot(
-                times,
-                self.df[param],
-                linewidth=2,
-                marker="o",
-                markersize=3,
-                markevery=max(1, len(self.df) // 50),
-                color=PLOT_COLOR,
-            )
-
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-            fig.autofmt_xdate(rotation=45, ha="right")
-
-            date = times.dt.date.iloc[0]
-            ax.set_xlim(
-                float(mdates.date2num(pd.Timestamp(f"{date} 09:00:00"))),
-                float(mdates.date2num(pd.Timestamp(f"{date} 17:00:00"))),
-            )
-
-            ax.set_xlabel("Time", fontsize=10, fontweight="bold")
-
             param_unit = self.units_map.get(param, "dimensionless")
             ylabel = (
                 f"{param} ({param_unit})" if param_unit != "dimensionless" else param
             )
-            ax.set_ylabel(ylabel, fontsize=10, fontweight="bold")
 
-            ax.set_title(f"{param} Over Time", fontsize=12, fontweight="bold", pad=10)
-            ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
-
+            ylim = None
             if param == "total_energy" and "total_energy" in self.param_entries:
                 try:
-                    ax.set_ylim(0, float(self.param_entries["total_energy"][0].get()))
+                    ylim = (0.0, float(self.param_entries["total_energy"][0].get()))
                 except ValueError:
                     pass
 
-            fig.tight_layout()
-
-            canvas = FigureCanvasTkAgg(fig, master=tab_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-            toolbar = NavigationToolbar2Tk(canvas, tab_frame)
-            toolbar.update()
+            self._add_graph_tab(
+                self.notebook,
+                param,
+                times,
+                cast(pd.Series, self.df[param]),
+                ylabel,
+                f"{param} Over Time",
+                ylim,
+            )
 
     # ── Grid Search Tab ─────────────────────────────────────────────────────
 
@@ -747,53 +781,18 @@ class SimulationGUI:
             if bool(df[param].isna().all()):
                 continue
 
-            tab_frame = ttk.Frame(self.gs_notebook)
-            self.gs_notebook.add(tab_frame, text=param)
-
-            fig = Figure(figsize=(10, 6), dpi=100)
-            ax = fig.add_subplot(111)
-
-            ax.plot(
-                times,
-                df[param],
-                linewidth=2,
-                marker="o",
-                markersize=3,
-                markevery=max(1, len(df) // 50),
-                color=PLOT_COLOR,
-            )
-
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-            fig.autofmt_xdate(rotation=45, ha="right")
-
-            date = times.dt.date.iloc[0]
-            ax.set_xlim(
-                float(mdates.date2num(pd.Timestamp(f"{date} 09:00:00"))),
-                float(mdates.date2num(pd.Timestamp(f"{date} 17:00:00"))),
-            )
-
-            ax.set_xlabel("Time", fontsize=10, fontweight="bold")
-
             param_unit = units_map.get(param, "dimensionless")
             ylabel = (
                 f"{param} ({param_unit})" if param_unit != "dimensionless" else param
             )
-            ax.set_ylabel(ylabel, fontsize=10, fontweight="bold")
-
-            ax.set_title(
-                f"{param} over Time\n{label}", fontsize=11, fontweight="bold", pad=10
+            self._add_graph_tab(
+                self.gs_notebook,
+                param,
+                times,
+                df[param],
+                ylabel,
+                f"{param} over Time\n{label}",
             )
-            ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
-
-            fig.tight_layout()
-
-            canvas = FigureCanvasTkAgg(fig, master=tab_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-            toolbar = NavigationToolbar2Tk(canvas, tab_frame)
-            toolbar.update()
 
         if current_tab:
             for tab in self.gs_notebook.tabs():
@@ -1031,11 +1030,8 @@ class SimulationGUI:
         if self.wp_is_running:
             return
 
-        self._last_wp_tab = (
-            self.wp_notebook.tab(self.wp_notebook.select(), "text")
-            if self.wp_notebook.tabs()
-            else None
-        )
+        if self.wp_notebook.tabs():
+            self._last_wp_tab = self.wp_notebook.tab(self.wp_notebook.select(), "text")
         for tab in self.wp_notebook.tabs():
             self.wp_notebook.forget(tab)
         self.wp_console.delete(1.0, tk.END)
@@ -1136,9 +1132,6 @@ class SimulationGUI:
 
         times = pd.to_datetime(self.wp_df["datetime"])
         skip = ["date", "time", "datetime"]
-        date = times.dt.date.iloc[0]
-        x_min = float(mdates.date2num(pd.Timestamp(f"{date} 09:00:00")))
-        x_max = float(mdates.date2num(pd.Timestamp(f"{date} 17:00:00")))
 
         for param in self.wp_df.columns:
             if param in skip:
@@ -1146,42 +1139,18 @@ class SimulationGUI:
             if bool(self.wp_df[param].isna().all()):
                 continue
 
-            tab_frame = ttk.Frame(self.wp_notebook)
-            self.wp_notebook.add(tab_frame, text=param)
-
-            fig = Figure(figsize=(10, 6), dpi=100)
-            ax = fig.add_subplot(111)
-
-            ax.plot(
-                times,
-                self.wp_df[param],
-                linewidth=2,
-                marker="o",
-                markersize=3,
-                markevery=max(1, len(self.wp_df) // 50),
-                color=PLOT_COLOR,
-            )
-
-            ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-            ax.set_xlim(x_min, x_max)
-            fig.autofmt_xdate(rotation=45, ha="right")
-
-            ax.set_xlabel("Time", fontsize=10, fontweight="bold")
             param_unit = self.wp_units_map.get(param, "dimensionless")
             ylabel = (
                 f"{param} ({param_unit})" if param_unit != "dimensionless" else param
             )
-            ax.set_ylabel(ylabel, fontsize=10, fontweight="bold")
-            ax.set_title(f"{param} Over Time", fontsize=12, fontweight="bold", pad=10)
-            ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
-            fig.tight_layout()
-
-            canvas = FigureCanvasTkAgg(fig, master=tab_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-            toolbar = NavigationToolbar2Tk(canvas, tab_frame)
-            toolbar.update()
+            self._add_graph_tab(
+                self.wp_notebook,
+                param,
+                times,
+                cast(pd.Series, self.wp_df[param]),
+                ylabel,
+                f"{param} Over Time",
+            )
 
 
 def main():

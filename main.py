@@ -1,6 +1,5 @@
-from pint import UnitRegistry, Quantity
+from pint import Quantity
 from pint.facets.plain import PlainQuantity
-from models.lv_draw_model import LVDrawModel
 from models.vehicle_model import VehicleModel
 from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
@@ -8,7 +7,7 @@ from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
 from models.weather_model import WeatherAPI
-from units import UNIT_REGISTRY, Q_
+from units import Q_
 
 from typing import TypedDict, cast
 from datetime import datetime, timedelta
@@ -440,8 +439,19 @@ def run_full_sim(
         )
         return None, None
 
-    df = run_simulation(m, capture_params, stop_event)
-    units_map = get_param_units(m, capture_params)
+    if hasattr(args, "waypoints") and args.waypoints is not None:
+        waypoints = []
+        for wp in args.waypoints:
+            t_str, v_str = wp.split(":")
+            waypoints.append((float(t_str) * 3600.0, float(v_str)))
+        waypoints.sort(key=lambda x: x[0])
+        sim_timestep = getattr(args, "sim_timestep", 60.0)
+        df, units_map = run_waypoint_sim(
+            waypoints, capture_params, {}, sim_timestep_s=sim_timestep
+        )
+    else:
+        df = run_simulation(m, capture_params, stop_event)
+        units_map = get_param_units(m, capture_params)
 
     if stop_event is None or not stop_event.is_set():
         os.makedirs(args.output_dir, exist_ok=True)
@@ -547,6 +557,18 @@ def main():
         "--params",
         default="params.yaml",
         help="Path to YAML parameter file (default: params.yaml)",
+    )
+    parser.add_argument(
+        "--waypoints",
+        nargs="+",
+        help="Velocity waypoints as time_hours:velocity pairs. Example: 0:0 1:15 3:40 8:20",
+        default=None,
+    )
+    parser.add_argument(
+        "--sim-timestep",
+        type=float,
+        default=60.0,
+        help="Simulation timestep in seconds for waypoint mode (default: 60)",
     )
     args = parser.parse_args()
     run_full_sim(args)
