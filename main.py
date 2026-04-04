@@ -85,7 +85,7 @@ def run_waypoint_sim(
     m.params["timestep"] = Q_(sim_timestep_s, "seconds")
 
     # Always run to 5 PM (8 hours after 9 AM start)
-    race_duration_s = 8 * 3600
+    race_duration_s = params["raceday_len"].to("seconds").magnitude
     total_steps = int(race_duration_s / sim_timestep_s)
     last_vel = float(spline(times_wp[-1]))
 
