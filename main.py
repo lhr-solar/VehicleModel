@@ -20,6 +20,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+from scipy.interpolate import PchipInterpolator
 from pathlib import Path
 import os
 from itertools import product
@@ -62,6 +63,73 @@ def build_model(params: dict[str, PlainQuantity[float]]) -> VehicleModel:
     m.add_model(MotorLossModel())
     m.set_battery_model(BatteryModel())
     return m
+
+
+def run_waypoint_sim(
+    waypoints: list[tuple[float, float]],
+    log_params: list[str],
+    param_overrides: dict,
+    sim_timestep_s: float = 60.0,
+    stop_event: threading.Event | None = None,
+) -> tuple[pd.DataFrame, dict[str, str]]:
+    """Run simulation with a cubic spline velocity profile from (time_s, velocity) waypoints."""
+    params = parse_yaml("params.yaml")
+    params.update(param_overrides)
+
+    times_wp = np.array([t for t, _ in waypoints])
+    vels_wp = np.array([v for _, v in waypoints])
+    spline = PchipInterpolator(times_wp, vels_wp)
+    vel_unit = params["velocity"].units
+
+    m = build_model(params)
+    m.params["timestep"] = Q_(sim_timestep_s, "seconds")
+
+    # Always run to 5 PM (8 hours after 9 AM start)
+    race_duration_s = 8 * 3600
+    total_steps = int(race_duration_s / sim_timestep_s)
+    last_vel = float(spline(times_wp[-1]))
+
+    start_ts = m.params.get(
+        "start_ts", Q_(datetime(2026, 7, 1, 9, 0, 0).timestamp(), "seconds")
+    )
+    current_time = datetime.fromtimestamp(start_ts.to("seconds").magnitude)
+
+    all_log_params = list(set(log_params + ["velocity"]))
+
+    rows: list[dict] = []
+    for i in range(total_steps):
+        if stop_event is not None and stop_event.is_set():
+            break
+
+        t = times_wp[0] + i * sim_timestep_s
+        velocity = float(spline(t)) if t <= times_wp[-1] else last_vel
+
+        m.params["velocity"] = Q_(velocity, vel_unit)
+
+        current_time += timedelta(seconds=sim_timestep_s)
+        sec_since_midnight = (
+            current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+        )
+        m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+
+        m.update()
+
+        row: dict = {
+            "date": current_time.strftime("%Y-%m-%d"),
+            "time": current_time.strftime("%H:%M:%S"),
+            "datetime": current_time,
+        }
+        for name in all_log_params:
+            value = m.params.get(name)
+            if isinstance(value, Quantity):
+                row[name] = value.magnitude
+            else:
+                row[name] = value
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+    units_map = get_param_units(m, all_log_params)
+    return df, units_map
 
 
 def run_simulation(
