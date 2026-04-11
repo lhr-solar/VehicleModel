@@ -6,8 +6,13 @@ from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import (
+    AuroraArrayModel,
     BasicArrayModel,
+    CloudCoverModifier,
+    ComposedArrayModel,
     DirtModifier,
+    IncidenceModifier,
+    IrradianceArrayCore,
     IrradianceArrayModel,
     LaminationModifier,
     ThermalModifier,
@@ -372,14 +377,18 @@ def main():
     m.add_model(SCPRollingResistanceModel())
     m.add_model(SCPDragModel())
     m.add_model(
-        IrradianceArrayModel(
+        model=ComposedArrayModel(
+            core=IrradianceArrayCore(),
             modifiers=[
+                CloudCoverModifier(),
                 DirtModifier(),
+                IncidenceModifier(),
                 LaminationModifier(),
                 ThermalModifier(),
-            ]
+            ],
         )
     )
+    #  m.add_model(AuroraArrayModel(m.params))
     m.add_model(MotorLossModel())
     m.set_battery_model(BatteryModel())
 
