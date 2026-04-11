@@ -362,8 +362,23 @@ def run_full_sim(
         )
         return None, None
 
-    df = run_simulation(m, capture_params, stop_event)
-    units_map = get_param_units(m, capture_params)
+    with open(args.params) as f:
+        _raw = yaml.safe_load(f)
+    wp_entry = next((p["value"] for p in _raw if p.get("name") == "velocity"), None)
+    if wp_entry is None:
+        raise ValueError("No 'velocity' waypoints entry found in params file.")
+    waypoints = sorted(
+        [(float(wp["time_h"]) * 3600.0, float(wp["velocity"])) for wp in wp_entry],
+        key=lambda x: x[0],
+    )
+    param_overrides = (
+        args.param_overrides
+        if hasattr(args, "param_overrides") and args.param_overrides
+        else {}
+    )
+    df, units_map = run_waypoint_sim(
+        waypoints, capture_params, param_overrides, stop_event=stop_event
+    )
 
     if stop_event is None or not stop_event.is_set():
         os.makedirs(args.output_dir, exist_ok=True)
