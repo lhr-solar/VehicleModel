@@ -1,13 +1,14 @@
-from abc import ABC, abstractmethod
-from pint.facets.plain import PlainQuantity
-from pint import Quantity
-from .battery import BatteryModel
-from .energy_model import EnergyModel
-from units import Q_
 import copy
+import numpy as np
 from datetime import datetime
 from typing import Optional
+
+from pint.facets.plain import PlainQuantity
+
+from .battery import BatteryModel
+from .energy_model import EnergyModel
 from .weather_model import WeatherAPI
+from units import Q_
 
 
 class VehicleModel:
@@ -30,9 +31,7 @@ class VehicleModel:
     def set_weather_model(self, model: WeatherAPI):
         self.weather_model = model
 
-    def update(self):
-        self.prev_params = self.params.copy()
-
+    def _update_weather(self):
         if self.weather_model is not None and "current_time_ts" in self.params:
             current_time = datetime.fromtimestamp(
                 self.params["current_time_ts"].magnitude
@@ -48,13 +47,17 @@ class VehicleModel:
             )
             self.params["weather_precipitation"] = Q_(weather["precipitation"], "mm")
 
+    def update_dynamic(self, velocities_si: np.ndarray, sub_dt: float):
+        """Run all models with the sub-timestep velocity vector, then battery and clamp."""
+        self._update_weather()
+
         for m in self.models:
-            self.params["total_energy"] += m.update(
-                self.params, self.params["timestep"]
+            self.params["total_energy"] += m.update_dynamic(
+                self.params, velocities_si, sub_dt
             )
 
-        self.params["total_energy"] += self.battery_model.update(
-            self.params, self.params["timestep"]
+        self.params["total_energy"] += self.battery_model.update_dynamic(
+            self.params, velocities_si, sub_dt
         )
 
         self.params["total_energy"] = max(

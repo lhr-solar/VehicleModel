@@ -38,8 +38,6 @@ class SimulationGUI:
 
         self._create_ui()
 
-    # ── Top-level layout ────────────────────────────────────────────────────
-
     def _create_ui(self):
         self.main_notebook = ttk.Notebook(self.root)
         self.main_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -630,10 +628,10 @@ class SimulationGUI:
             with open("params.yaml") as f:
                 data = yaml.safe_load(f)
             waypoints = next(
-                (p["value"] for p in data if p.get("name") == "waypoints"), None
+                (p["value"] for p in data if p.get("name") == "velocity"), None
             )
             if waypoints is None:
-                preview = "No 'waypoints' entry found in params.yaml"
+                preview = "No 'velocity' waypoints entry found in params.yaml"
             else:
                 lines = [
                     f"  time_h={wp['time_h']:.2f}  velocity={wp['velocity']:.2f}"
@@ -688,10 +686,12 @@ class SimulationGUI:
                 with open("params.yaml") as f:
                     raw = yaml.safe_load(f)
                 wp_entry = next(
-                    (p["value"] for p in raw if p.get("name") == "waypoints"), None
+                    (p["value"] for p in raw if p.get("name") == "velocity"), None
                 )
                 if wp_entry is None:
-                    raise ValueError("No 'waypoints' entry found in params.yaml")
+                    raise ValueError(
+                        "No 'velocity' waypoints entry found in params.yaml"
+                    )
                 waypoints = sorted(
                     [
                         (float(wp["time_h"]) * 3600.0, float(wp["velocity"]))

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+import numpy as np
 from pint.facets.plain import PlainQuantity
-from pint import Quantity
 
 
 class EnergyModel(ABC):
@@ -8,7 +8,10 @@ class EnergyModel(ABC):
         pass
 
     @abstractmethod
-    def update(
-        self, params: dict[str, PlainQuantity[float]], timestep: PlainQuantity[float]
+    def update_dynamic(
+        self,
+        params: dict[str, PlainQuantity[float]],
+        velocities_si: np.ndarray,
+        sub_dt: float,
     ) -> PlainQuantity[float]:
         pass

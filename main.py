@@ -61,6 +61,7 @@ def build_model(params: dict[str, PlainQuantity[float]]) -> VehicleModel:
     m.add_model(SCPDragModel())
     m.add_model(SCPArrayModel())
     m.add_model(MotorLossModel())
+    m.add_model(LVDrawModel())
     m.set_battery_model(BatteryModel())
     return m
 
@@ -77,19 +78,24 @@ def run_waypoint_sim(
     params = parse_yaml("params.yaml")
     params.update(param_overrides)
 
+    with open("params.yaml") as f:
+        _raw = yaml.safe_load(f)
+    vel_unit = next((p["unit"] for p in _raw if p.get("name") == "velocity"), "mph")
+
     times_wp = np.array([t for t, _ in waypoints])
     vels_wp = np.array([v for _, v in waypoints])
     spline = PchipInterpolator(times_wp, vels_wp)
-    vel_unit = params["velocity"].units
 
     m = build_model(params)
 
     sub_dt = sim_timestep_s / max(1, integration_steps)
-    m.params["timestep"] = Q_(sub_dt, "seconds")
 
     race_duration_s = params["raceday_len"].to("seconds").magnitude
     total_steps = int(race_duration_s / sim_timestep_s)
     last_vel = float(spline(times_wp[-1]))
+
+    # Sub-timestep midpoint offsets, reused every outer step
+    j_offsets = (np.arange(integration_steps) + 0.5) * sub_dt
 
     start_ts = m.params.get(
         "start_ts", Q_(datetime(2026, 7, 1, 9, 0, 0).timestamp(), "seconds")
@@ -105,18 +111,25 @@ def run_waypoint_sim(
 
         t_outer = times_wp[0] + i * sim_timestep_s
 
-        for j in range(integration_steps):
-            t_sub = t_outer + (j + 0.5) * sub_dt
-            velocity = float(spline(t_sub)) if t_sub <= times_wp[-1] else last_vel
-            m.params["velocity"] = Q_(velocity, vel_unit)
+        # Pre-compute velocity vector at sub-timestep midpoints
+        t_subs = t_outer + j_offsets
+        raw_vels = np.where(
+            t_subs <= times_wp[-1], spline(t_subs).astype(float), last_vel
+        )
+        velocities_si = Q_(raw_vels, vel_unit).to("m/s").magnitude
 
-            current_time += timedelta(seconds=sub_dt)
-            sec_since_midnight = (
-                current_time
-                - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
-            ).total_seconds()
-            m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
-            m.update()
+        # Advance time and timestamp to end of outer step
+        current_time += timedelta(seconds=sim_timestep_s)
+        sec_since_midnight = (
+            current_time
+            - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        ).total_seconds()
+        m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+
+        # Log time-averaged velocity over the outer step
+        m.params["velocity"] = Q_(float(np.mean(raw_vels)), vel_unit)
+
+        m.update_dynamic(velocities_si, sub_dt)
 
         row: dict = {
             "date": current_time.strftime("%Y-%m-%d"),
@@ -170,7 +183,9 @@ def run_simulation(
         # inject timestamp into model params
         m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
 
-        m.update()
+        v_si = m.params["velocity"].to("m/s").magnitude
+        sub_dt = timestep_seconds
+        m.update_dynamic(np.full(2, v_si), sub_dt)
 
         # Store date, time, and datetime object
         row = {
