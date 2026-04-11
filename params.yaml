@@ -60,6 +60,20 @@
   value: 0
   unit: joule
 
+# velocity waypoints
+# time_h: hours from race start (0 = 9:00 AM), velocity: mph
+- name: velocity
+  unit: mph
+  value:
+    - time_h: 0.0
+      velocity: 0.0
+    - time_h: 1.0
+      velocity: 40.0
+    - time_h: 4.0
+      velocity: 40.0
+    - time_h: 8.0
+      velocity: 0.0
+
 # main
 -
   name: timestep
@@ -69,10 +83,6 @@
   name: raceday_len
   unit: hours
   value: 8
--
-  name: velocity
-  unit: mph
-  value: 40
 -
   name: total_energy
   unit: Wh

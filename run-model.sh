@@ -3,6 +3,7 @@ set -euo pipefail
 
 MODE="run"        # run | check
 RUN_CHECKS=1      # 1 = run ruff/pyright, 0 = skip
+GUI=0
 
 ARGS=()
 while [[ $# -gt 0 ]]; do
@@ -10,6 +11,7 @@ while [[ $# -gt 0 ]]; do
     --check)      MODE="check"; shift ;;
     --run)        MODE="run"; shift ;;
     --no-checks)  RUN_CHECKS=0; shift ;;
+    --gui)        GUI=1; shift ;;
     --)           shift; ARGS+=("$@"); break ;;
     *)            ARGS+=("$1"); shift ;;
   esac
@@ -42,5 +44,9 @@ run_checks() {
 run_checks
 
 if [[ "$MODE" == "run" ]]; then
-  uv run main.py "${ARGS[@]}"
+  if [[ "$GUI" -eq 1 ]]; then
+    uv run gui.py
+  else
+    uv run main.py "${ARGS[@]+"${ARGS[@]}"}"
+  fi
 fi
