@@ -73,6 +73,7 @@ def run_waypoint_sim(
     integration_steps: int = 10,
     stop_event: threading.Event | None = None,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
+    """Run simulation with a cubic spline velocity profile from (time_s, velocity) waypoints."""
     params = parse_yaml("params.yaml")
     params.update(param_overrides)
 
@@ -83,7 +84,7 @@ def run_waypoint_sim(
 
     m = build_model(params)
 
-    sub_dt = sim_timestep_s / integration_steps
+    sub_dt = sim_timestep_s / max(1, integration_steps)
     m.params["timestep"] = Q_(sub_dt, "seconds")
 
     race_duration_s = params["raceday_len"].to("seconds").magnitude
@@ -102,7 +103,6 @@ def run_waypoint_sim(
         if stop_event is not None and stop_event.is_set():
             break
 
-        row_time = current_time
         t_outer = times_wp[0] + i * sim_timestep_s
 
         for j in range(integration_steps):
@@ -112,17 +112,16 @@ def run_waypoint_sim(
 
             current_time += timedelta(seconds=sub_dt)
             sec_since_midnight = (
-                current_time.hour * 3600
-                + current_time.minute * 60
-                + current_time.second
-            )
+                current_time
+                - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            ).total_seconds()
             m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
             m.update()
 
         row: dict = {
-            "date": row_time.strftime("%Y-%m-%d"),
-            "time": row_time.strftime("%H:%M:%S"),
-            "datetime": row_time,
+            "date": current_time.strftime("%Y-%m-%d"),
+            "time": current_time.strftime("%H:%M:%S"),
+            "datetime": current_time,
         }
         for name in all_log_params:
             value = m.params.get(name)
@@ -164,8 +163,9 @@ def run_simulation(
 
         # seconds since midnight
         sec_since_midnight = (
-            current_time.hour * 3600 + current_time.minute * 60 + current_time.second
-        )
+            current_time
+            - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        ).total_seconds()
 
         # inject timestamp into model params
         m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
