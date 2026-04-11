@@ -6,3 +6,4 @@ __pycache__
 .python-version
 *.csv
 output/
+.vscode/
