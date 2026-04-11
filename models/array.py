@@ -465,8 +465,17 @@ class AuroraArrayModel(EnergyModel):
             pv_string = PVString(substrings=substring_list)
             string_list.append(pv_string)
 
-        return Array(string_list=string_list, topology="series")
+            aurora_array = Array(string_list=string_list, topology="series")
 
+        num_cells = sum(
+            len(getattr(sub, "cell_list", []))
+            for s in aurora_array.string_list
+            for sub in s.substrings
+        )
+        params["num_cells"] = Q_(num_cells, "")
+
+        return aurora_array
+    
     @override
     def update(
         self,
