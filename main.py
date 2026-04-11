@@ -1,12 +1,12 @@
 from pint import Quantity
 from pint.facets.plain import PlainQuantity
+from models.lv_draw_model import LVDrawModel
 from models.vehicle_model import VehicleModel
 from models.battery import BatteryModel
 from models.rr import SCPRollingResistanceModel
 from models.drag import SCPDragModel
 from models.array import SCPArrayModel
 from models.motor_losses import MotorLossModel
-from models.weather_model import WeatherAPI
 from units import Q_
 
 from typing import TypedDict, cast
@@ -70,6 +70,7 @@ def run_waypoint_sim(
     log_params: list[str],
     param_overrides: dict,
     sim_timestep_s: float = 60.0,
+    integration_steps: int = 10,
     stop_event: threading.Event | None = None,
 ) -> tuple[pd.DataFrame, dict[str, str]]:
     """Run simulation with a cubic spline velocity profile from (time_s, velocity) waypoints."""
@@ -82,9 +83,10 @@ def run_waypoint_sim(
     vel_unit = params["velocity"].units
 
     m = build_model(params)
-    m.params["timestep"] = Q_(sim_timestep_s, "seconds")
 
-    # Always run to 5 PM (8 hours after 9 AM start)
+    sub_dt = sim_timestep_s / max(1, integration_steps)
+    m.params["timestep"] = Q_(sub_dt, "seconds")
+
     race_duration_s = params["raceday_len"].to("seconds").magnitude
     total_steps = int(race_duration_s / sim_timestep_s)
     last_vel = float(spline(times_wp[-1]))
@@ -101,18 +103,20 @@ def run_waypoint_sim(
         if stop_event is not None and stop_event.is_set():
             break
 
-        t = times_wp[0] + i * sim_timestep_s
-        velocity = float(spline(t)) if t <= times_wp[-1] else last_vel
+        t_outer = times_wp[0] + i * sim_timestep_s
 
-        m.params["velocity"] = Q_(velocity, vel_unit)
+        for j in range(integration_steps):
+            t_sub = t_outer + (j + 0.5) * sub_dt
+            velocity = float(spline(t_sub)) if t_sub <= times_wp[-1] else last_vel
+            m.params["velocity"] = Q_(velocity, vel_unit)
 
-        current_time += timedelta(seconds=sim_timestep_s)
-        sec_since_midnight = (
-            current_time.hour * 3600 + current_time.minute * 60 + current_time.second
-        )
-        m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
-
-        m.update()
+            current_time += timedelta(seconds=sub_dt)
+            sec_since_midnight = (
+                current_time
+                - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            ).total_seconds()
+            m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
+            m.update()
 
         row: dict = {
             "date": current_time.strftime("%Y-%m-%d"),
@@ -149,29 +153,6 @@ def run_simulation(
     current_time = datetime.fromtimestamp(start_ts.to("seconds").magnitude)
     timestep_seconds = m.params["timestep"].to("seconds").magnitude
 
-    # Initialize weather model if enabled
-    if m.params.get("use_weather_data", Q_(0, "dimensionless")).magnitude > 0:
-        try:
-            weather_model = WeatherAPI()
-            latitude = m.params["latitude_deg"].magnitude
-            longitude = m.params["longitude_deg"].magnitude
-
-            # Calculate end time
-            end_time = current_time + timedelta(seconds=timestep_seconds * total_steps)
-
-            print(
-                f"Fetching weather data for {latitude}, {longitude} from {current_time} to {end_time}..."
-            )
-            weather_model.fetch_weather_data(
-                latitude, longitude, current_time, end_time
-            )
-            m.set_weather_model(weather_model)
-            print("Weather data loaded successfully")
-        except Exception as e:
-            print(
-                f"Warning: Failed to load weather data: {str(e)}. Continuing without weather effects."
-            )
-
     rows: list[dict] = []
 
     # Logging for every timestep
@@ -182,12 +163,12 @@ def run_simulation(
 
         # seconds since midnight
         sec_since_midnight = (
-            current_time.hour * 3600 + current_time.minute * 60 + current_time.second
-        )
+            current_time
+            - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        ).total_seconds()
 
         # inject timestamp into model params
         m.params["timestamp"] = Q_(sec_since_midnight, "seconds")
-        m.params["current_time_ts"] = Q_(current_time.timestamp(), "seconds")
 
         m.update()
 
@@ -207,12 +188,7 @@ def run_simulation(
 
         rows.append(row)
 
-    df = pd.DataFrame(rows)
-
-    if m.weather_model is not None:
-        create_weather_graph(df, "output")
-
-    return df
+    return pd.DataFrame(rows)
 
 
 def get_param_units(m: VehicleModel, params: list[str]) -> dict[str, str]:
@@ -273,74 +249,6 @@ def create_graph(df: pd.DataFrame, param: str, param_unit: str, output_path: str
     plt.close()
 
     print(f"Graph saved to {output_path}")
-
-
-def create_weather_graph(df: pd.DataFrame, output_dir: str = "output"):
-    """Create a 2x2 panel graph showing all weather variables over time."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    weather_params = [
-        "weather_temperature",
-        "weather_cloud_cover",
-        "weather_wind_speed",
-        "weather_wind_direction",
-    ]
-
-    # Check if weather data exists
-    available_params = [p for p in weather_params if p in df.columns]
-    if not available_params:
-        print("No weather data available to graph")
-        return
-
-    plt.style.use("seaborn-v0_8-darkgrid")
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle(
-        "Weather Conditions Over Race Duration", fontsize=16, fontweight="bold"
-    )
-
-    weather_config = {
-        "weather_temperature": {"ylabel": "Temperature (°C)", "color": "#FF6B6B"},
-        "weather_cloud_cover": {"ylabel": "Cloud Cover (%)", "color": "#4ECDC4"},
-        "weather_wind_speed": {"ylabel": "Wind Speed (m/s)", "color": "#45B7D1"},
-        "weather_wind_direction": {"ylabel": "Wind Direction (°)", "color": "#96CEB4"},
-    }
-
-    for idx, param in enumerate(weather_params):
-        if param not in df.columns:
-            continue
-
-        ax = axes[idx // 2, idx % 2]
-        config = weather_config[param]
-
-        ax.plot(
-            df["datetime"],
-            df[param],
-            marker="o",
-            linestyle="-",
-            linewidth=2,
-            markersize=4,
-            color=config["color"],
-            markevery=max(1, len(df) // 20),
-        )
-
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-        ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
-
-        ax.set_xlabel("Time", fontsize=11, fontweight="bold")
-        ax.set_ylabel(config["ylabel"], fontsize=11, fontweight="bold")
-        ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
-
-    plt.tight_layout()
-
-    output_file = output_path / "weather_conditions.png"
-    plt.savefig(
-        output_file, bbox_inches="tight", facecolor="white", edgecolor="none", dpi=150
-    )
-    plt.close()
-
-    print(f"Weather graph saved to {output_file}")
 
 
 def generate_graphs(
@@ -439,19 +347,8 @@ def run_full_sim(
         )
         return None, None
 
-    if hasattr(args, "waypoints") and args.waypoints is not None:
-        waypoints = []
-        for wp in args.waypoints:
-            t_str, v_str = wp.split(":")
-            waypoints.append((float(t_str) * 3600.0, float(v_str)))
-        waypoints.sort(key=lambda x: x[0])
-        sim_timestep = getattr(args, "sim_timestep", 60.0)
-        df, units_map = run_waypoint_sim(
-            waypoints, capture_params, {}, sim_timestep_s=sim_timestep
-        )
-    else:
-        df = run_simulation(m, capture_params, stop_event)
-        units_map = get_param_units(m, capture_params)
+    df = run_simulation(m, capture_params, stop_event)
+    units_map = get_param_units(m, capture_params)
 
     if stop_event is None or not stop_event.is_set():
         os.makedirs(args.output_dir, exist_ok=True)
@@ -557,18 +454,6 @@ def main():
         "--params",
         default="params.yaml",
         help="Path to YAML parameter file (default: params.yaml)",
-    )
-    parser.add_argument(
-        "--waypoints",
-        nargs="+",
-        help="Velocity waypoints as time_hours:velocity pairs. Example: 0:0 1:15 3:40 8:20",
-        default=None,
-    )
-    parser.add_argument(
-        "--sim-timestep",
-        type=float,
-        default=60.0,
-        help="Simulation timestep in seconds for waypoint mode (default: 60)",
     )
     args = parser.parse_args()
     run_full_sim(args)
