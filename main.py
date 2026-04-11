@@ -49,7 +49,7 @@ def parse_yaml(yaml_path: str) -> dict[str, PlainQuantity[float]]:
                 result[param["name"]] = Q_(
                     datetime.fromisoformat(str(param["value"])).timestamp(), "seconds"
                 )
-        else:
+        elif not isinstance(param["value"], (list, dict)):
             result[param["name"]] = Q_(param["value"], param["unit"])
 
     return result

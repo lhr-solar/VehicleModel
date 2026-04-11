@@ -33,7 +33,6 @@ class SimulationGUI:
         self.wp_units_map = {}
         self.wp_is_running = False
         self._wp_stop_event = threading.Event()
-        self.wp_rows = []  # list of (time_var, vel_var, frame)
 
         self.yaml_params = parse_yaml("params.yaml")
 
@@ -467,7 +466,7 @@ class SimulationGUI:
         scrollbar.pack(side="right", fill="y")
 
         row = 0
-        ttk.Label(cf, text="Velocity Waypoints", font=("Arial", 14, "bold")).grid(
+        ttk.Label(cf, text="Simulation", font=("Arial", 14, "bold")).grid(
             row=row, column=0, columnspan=3, pady=10
         )
         row += 1
@@ -477,26 +476,18 @@ class SimulationGUI:
         )
         row += 1
 
-        vel_unit_label = (
-            f"{self.yaml_params['velocity'].units:~}"
-            if "velocity" in self.yaml_params
-            else "mph"
-        )
-        ttk.Label(cf, text="Time (h)", font=("Arial", 9, "bold")).grid(
-            row=row, column=0, padx=5
-        )
         ttk.Label(
-            cf, text=f"Velocity ({vel_unit_label})", font=("Arial", 9, "bold")
-        ).grid(row=row, column=1, padx=5)
-        row += 1
-
-        self.wp_rows_container = ttk.Frame(cf)
-        self.wp_rows_container.grid(row=row, column=0, columnspan=3, sticky=tk.EW)
-        row += 1
-
-        ttk.Button(cf, text="+ Add Waypoint", command=self._wp_add_row).grid(
-            row=row, column=0, columnspan=3, sticky=tk.W, pady=5
+            cf, text="Waypoints (from params.yaml):", font=("Arial", 9, "bold")
+        ).grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=2)
+        ttk.Button(cf, text="Reload", command=self._wp_load_config).grid(
+            row=row, column=2, sticky=tk.E, pady=2
         )
+        row += 1
+
+        self.wp_preview = scrolledtext.ScrolledText(
+            cf, width=38, height=6, wrap=tk.WORD, state="disabled"
+        )
+        self.wp_preview.grid(row=row, column=0, columnspan=3, sticky=tk.EW, pady=5)
         row += 1
 
         ttk.Separator(cf, orient="horizontal").grid(
@@ -624,9 +615,7 @@ class SimulationGUI:
         )
         self.wp_console.grid(row=row, column=0, columnspan=3, sticky=tk.NSEW, pady=5)
 
-        # Add two default waypoints (time in hours)
-        self._wp_add_row(default_time="0", default_vel="0")
-        self._wp_add_row(default_time="1", default_vel="15")
+        self._wp_load_config()
 
         # Right: graph area
         graph_frame = ttk.Frame(parent, padding="10")
@@ -634,35 +623,33 @@ class SimulationGUI:
         self.wp_notebook = ttk.Notebook(graph_frame)
         self.wp_notebook.pack(fill=tk.BOTH, expand=True)
 
-    def _wp_add_row(self, default_time="", default_vel=""):
-        time_var = tk.StringVar(value=default_time)
-        vel_var = tk.StringVar(value=default_vel)
+    def _wp_load_config(self):
+        import yaml
 
-        row_frame = ttk.Frame(self.wp_rows_container)
-        row_frame.pack(fill=tk.X, pady=2)
+        try:
+            with open("params.yaml") as f:
+                data = yaml.safe_load(f)
+            waypoints = next(
+                (p["value"] for p in data if p.get("name") == "waypoints"), None
+            )
+            if waypoints is None:
+                preview = "No 'waypoints' entry found in params.yaml"
+            else:
+                lines = [
+                    f"  time_h={wp['time_h']:.2f}  velocity={wp['velocity']:.2f}"
+                    for wp in waypoints
+                ]
+                preview = (
+                    f"{len(lines)} waypoints loaded from params.yaml:\n"
+                    + "\n".join(lines)
+                )
+        except Exception as e:
+            preview = f"Error loading params.yaml:\n{e}"
 
-        ttk.Entry(row_frame, textvariable=time_var, width=10).pack(
-            side=tk.LEFT, padx=(0, 5)
-        )
-        ttk.Entry(row_frame, textvariable=vel_var, width=10).pack(
-            side=tk.LEFT, padx=(0, 5)
-        )
-
-        row_data = {"frame": row_frame, "time": time_var, "vel": vel_var}
-        self.wp_rows.append(row_data)
-
-        ttk.Button(
-            row_frame,
-            text="x",
-            width=2,
-            command=lambda r=row_data: self._wp_remove_row(r),
-        ).pack(side=tk.LEFT)
-
-    def _wp_remove_row(self, row_data):
-        if len(self.wp_rows) <= 2:
-            return
-        row_data["frame"].destroy()
-        self.wp_rows.remove(row_data)
+        self.wp_preview.config(state="normal")
+        self.wp_preview.delete(1.0, tk.END)
+        self.wp_preview.insert(tk.END, preview)
+        self.wp_preview.config(state="disabled")
 
     def _wp_log(self, message):
         self.wp_console.insert(tk.END, f"{message}\n")
@@ -693,19 +680,29 @@ class SimulationGUI:
 
     def _wp_worker(self):
         try:
+            import yaml
+
             self.wp_is_running = True
 
-            # Parse waypoints — time entered in hours, convert to seconds
-            waypoints = []
-            for r in self.wp_rows:
-                try:
-                    t_h = float(r["time"].get())
-                    v = float(r["vel"].get())
-                    waypoints.append((t_h * 3600.0, v))
-                except ValueError:
-                    self._wp_log("Warning: skipping invalid waypoint row")
-
-            waypoints.sort(key=lambda x: x[0])
+            try:
+                with open("params.yaml") as f:
+                    raw = yaml.safe_load(f)
+                wp_entry = next(
+                    (p["value"] for p in raw if p.get("name") == "waypoints"), None
+                )
+                if wp_entry is None:
+                    raise ValueError("No 'waypoints' entry found in params.yaml")
+                waypoints = sorted(
+                    [
+                        (float(wp["time_h"]) * 3600.0, float(wp["velocity"]))
+                        for wp in wp_entry
+                    ],
+                    key=lambda x: x[0],
+                )
+            except Exception as e:
+                self._wp_log(f"ERROR loading waypoints from params.yaml: {e}")
+                self.wp_status_label.config(text="Status: Error", foreground="red")
+                return
 
             if len(waypoints) < 2:
                 self._wp_log("ERROR: Need at least 2 waypoints.")
