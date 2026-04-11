@@ -31,11 +31,17 @@
   value: 92.92334
 
 # array stuff
--
-  name: num_cells
+- name: num_strings
   unit: dimensionless
-  value: 258
+  value: 2
 
+- name: substrings_per_string
+  unit: dimensionless
+  value: 3
+
+- name: cells_per_substring
+  unit: dimensionless
+  value: 43
 -
   name: p_mpp
   unit: W
@@ -276,7 +282,7 @@
 -
   name: wheel_diameter
   unit: m
-  value: 0.5
+  value: 0.547624
 #battery
 #esr_loss_model
 -
